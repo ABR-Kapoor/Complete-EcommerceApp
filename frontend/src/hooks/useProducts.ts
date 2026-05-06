@@ -1,0 +1,87 @@
+import { useEffect, useState } from "react";
+import api from "../lib/api";
+
+export interface Product {
+  id: number;
+  title: string;
+  price: number;
+  description: string;
+  category: string;
+  image_url: string;
+  sold: boolean;
+  is_sale: boolean;
+}
+
+export const useProducts = (category?: string, minPrice?: number, maxPrice?: number, search?: string) => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (category) params.append("category", category);
+        if (minPrice !== undefined) params.append("min_price", minPrice.toString());
+        if (maxPrice !== undefined) params.append("max_price", maxPrice.toString());
+        if (search) params.append("search", search);
+
+        const response = await api.get(`/api/products?${params}`);
+        setProducts(response.data);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [category, minPrice, maxPrice, search]);
+
+  return { products, loading, error };
+};
+
+export const useProduct = (id: number) => {
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const response = await api.get(`/api/products/${id}`);
+        setProduct(response.data);
+        setError(null);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  return { product, loading, error };
+};
+
+export const useCategories = () => {
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get("/api/products/categories");
+        setCategories(response.data.map((c: any) => c.name));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  return { categories, loading };
+};
