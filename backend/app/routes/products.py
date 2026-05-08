@@ -26,11 +26,8 @@ def get_most_bought():
 @router.get("/")
 def get_products(category: str = None, min_price: float = None, max_price: float = None, search: str = None):
     try:
-        print(f"DEBUG: Fetching products with filters - category={category}, min_price={min_price}, max_price={max_price}, search={search}")
         client = get_supabase_client()
-        print("DEBUG: Client initialized")
         query = client.table("products").select("*")
-        print("DEBUG: Query object created")
         
         if category:
             query = query.eq("category", category)
@@ -41,9 +38,7 @@ def get_products(category: str = None, min_price: float = None, max_price: float
         if search:
             query = query.ilike("title", f"%{search}%")
         
-        print("DEBUG: About to execute query...")
         data = query.execute()
-        print(f"DEBUG: Query executed. Returned {len(data.data) if data.data else 0} products")
         return data.data or []
     except Exception as e:
         print(f"Error fetching products: {e}")

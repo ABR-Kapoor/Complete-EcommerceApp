@@ -53,7 +53,7 @@ export const Home = () => {
         setFeatured([...products].sort(() => 0.5 - Math.random()).slice(0, 2));
       };
       pick();
-      const interval = setInterval(pick, 2600);
+      const interval = setInterval(pick, 15000); // Rotate every 15 seconds
       return () => clearInterval(interval);
     }
   }, [products]);
@@ -120,7 +120,7 @@ export const Home = () => {
                   style={{ 
                     display: "flex", flexDirection: "column", gap: 8, padding: 12, 
                     background: "#fff", borderRadius: 16, border: "1px solid #f1f5f9",
-                    transition: "all 0.2s", textDecoration: "none"
+                    transition: "all 15s", textDecoration: "none"
                   }}
                   onMouseOver={e => e.currentTarget.style.borderColor = "#6366f1"}
                   onMouseOut={e => e.currentTarget.style.borderColor = "#f1f5f9"}

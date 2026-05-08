@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, Body
 from app.db import get_supabase_client, get_supabase_admin
 from typing import Dict, Any
-import traceback
 import os
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 @router.post("/profile")
+@router.post("/sync")
 def create_or_update_user(data: Dict[str, Any] = Body(...)):
     """Create or update user profile after login"""
     client = get_supabase_admin()
@@ -32,7 +32,7 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
             client.table("users").insert(payload).execute()
         return {"status": "ok", "user_id": user_id}
     except Exception as e:
-        print(f"Profile Sync Error: {traceback.format_exc()}")
+        print(f"Profile Sync Error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{user_id}")
@@ -47,7 +47,7 @@ def get_user(user_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"GET USER ERROR: {traceback.format_exc()}")
+        print(f"GET USER ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{user_id}/address")

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, Body
 from app.db import get_supabase_admin
 from typing import Dict, Any
-import traceback
 import os
 
 router = APIRouter(tags=["orders"])
@@ -80,7 +79,7 @@ def create_order(data: dict = Body(...)):
         return {"status": "ok", "order_id": oid}
         
     except Exception as e:
-        print(f"ORDER CRITICAL FAIL: {traceback.format_exc()}")
+        print(f"Order Placement Failed: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/api/orders/user/{user_id}")
