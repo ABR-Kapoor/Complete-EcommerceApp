@@ -94,9 +94,31 @@ Frontend runs at http://localhost:5173
 - POST `/api/admin/upload/avatar/{user_id}` - Upload avatar
 - GET `/api/admin/orders` - Get all orders
 
-## Database Schema
+## Deployment (Vercel)
 
-See [schema.sql](schema.sql) for full database structure.
+Both the Frontend and Backend can be hosted on Vercel. Configuration files (`vercel.json`) are already included in their respective directories.
+
+### Backend Deployment (FastAPI)
+1. In Vercel, create a new project and point it to the `/backend` directory.
+2. The framework will be automatically detected as Python.
+3. Configure Environment Variables:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+   - `SUPABASE_ADMIN_KEY`
+   - `CLERK_SECRET_KEY`
+
+### Frontend Deployment (React)
+1. Create a new project and point it to the `/frontend` directory.
+2. Framework: Vite.
+3. Configure Environment Variables:
+   - `VITE_CLERK_PUBLISHABLE_KEY`
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_KEY`
+   - `VITE_API_URL` (Set this to your deployed Backend URL)
+
+---
+
+## Database Schema
 
 Key tables:
 - users
