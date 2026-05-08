@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/userStore";
-import { User as UserIcon, Mail, Phone, MapPin, Package, Zap, LogOut, X, Loader2 } from "lucide-react";
+import { User as UserIcon, MapPin, Package, Zap, LogOut, X, Loader2 } from "lucide-react";
 
 interface ProfileModalProps {
   onClose: () => void;

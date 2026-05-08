@@ -15,7 +15,6 @@ interface ProductCardProps {
 
 export const ProductCard = ({ 
   product, 
-  inCart, 
   inWishlist, 
   justAdded, 
   onAddToCart, 

@@ -4,7 +4,7 @@ import { useCartStore } from "../store/cartStore";
 import { useUserStore } from "../store/userStore";
 import { useEffect, useState } from "react";
 import ProfileModal from "./ProfileModal";
-import { ShoppingCart, Package, Heart, Zap, User as UserIcon } from "lucide-react";
+import { ShoppingCart, Package, Zap } from "lucide-react";
 
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
