@@ -7,7 +7,7 @@ interface WishlistStore {
   clear: () => void;
 }
 
-export const useWishlistStore = create<WishlistStore>(
+export const useWishlistStore = create<WishlistStore>()(
   persist(
     (set) => ({
       items: [],

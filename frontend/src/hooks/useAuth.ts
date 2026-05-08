@@ -9,7 +9,7 @@ export const useAuth = () => {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data } = await supabase.auth.getSession();
         if (data.session) {
           const user = data.session.user;
           setUser({
@@ -31,7 +31,7 @@ export const useAuth = () => {
     checkSession();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      (_event, session) => {
         if (session) {
           const user = session.user;
           setUser({

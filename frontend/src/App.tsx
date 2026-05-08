@@ -1,37 +1,60 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./hooks/useAuth";
-import { useAuthStore } from "./store/authStore";
+import { ClerkProvider, useUser } from "@clerk/clerk-react";
 import { Home } from "./pages/Home";
-import { ProductDetail } from "./pages/ProductDetail";
+import ProductDetail from "./pages/ProductDetail";
 import { Login } from "./pages/Login";
 import { Cart } from "./pages/Cart";
 import { Checkout } from "./pages/Checkout";
 import { Orders } from "./pages/Orders";
 import { Admin } from "./pages/Admin";
+import { OrderSuccess } from "./pages/OrderSuccess";
+import { Wishlist } from "./pages/Wishlist";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const user = useAuthStore((state) => state.user);
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  const { isSignedIn, isLoaded } = useUser();
+  if (!isLoaded) return null;
+  return isSignedIn ? <>{children}</> : <Navigate to="/login" />;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const user = useAuthStore((state) => state.user);
-  return user && user.role === "admin" ? <>{children}</> : <Navigate to="/" />;
+  const { user, isLoaded, isSignedIn } = useUser();
+  if (!isLoaded) return null;
+  const isAdmin = user?.publicMetadata?.role === "admin" || user?.emailAddresses.some(e => e.emailAddress === "abrmkprm@gmail.com");
+  return isSignedIn && isAdmin ? <>{children}</> : <Navigate to="/" />;
 }
 
-export default function App() {
-  const { loading } = useAuth();
+import { useEffect } from "react";
+import api from "./lib/api";
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
-      </div>
-    );
-  }
+function UserSync() {
+  const { user, isSignedIn } = useUser();
 
+  useEffect(() => {
+    const sync = async () => {
+      if (isSignedIn && user) {
+        try {
+          await api.post("/api/users/sync", {
+            id: user.id,
+            email: user.primaryEmailAddress?.emailAddress,
+            name: user.fullName || user.username || user.primaryEmailAddress?.emailAddress?.split("@")[0],
+            avatar_url: user.imageUrl,
+          });
+        } catch (err) {
+          console.error("User sync failed:", err);
+        }
+      }
+    };
+    sync();
+  }, [isSignedIn, user]);
+
+  return null;
+}
+
+function AppRoutes() {
   return (
-    <Router>
+    <div className="app-shell">
+      <UserSync />
+      <div className="shell-glow" />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product/:id" element={<ProductDetail />} />
@@ -61,6 +84,14 @@ export default function App() {
           }
         />
         <Route
+          path="/wishlist"
+          element={
+            <ProtectedRoute>
+              <Wishlist />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin"
           element={
             <AdminRoute>
@@ -68,7 +99,27 @@ export default function App() {
             </AdminRoute>
           }
         />
+        <Route
+          path="/order-success/:id"
+          element={
+            <ProtectedRoute>
+              <OrderSuccess />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
-    </Router>
+    </div>
+  );
+}
+
+export default function App() {
+  const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+  
+  return (
+    <ClerkProvider publishableKey={publishableKey}>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </ClerkProvider>
   );
 }

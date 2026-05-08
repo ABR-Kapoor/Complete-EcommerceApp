@@ -1,18 +1,6 @@
 import { useState } from "react";
 import api from "../lib/api";
 
-interface LoginData {
-  phone: string;
-  otp: string;
-}
-
-interface SignupData {
-  email: string;
-  phone: string;
-  password: string;
-  name: string;
-}
-
 export const useAuthService = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

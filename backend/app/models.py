@@ -10,6 +10,7 @@ class Product(BaseModel):
     image_url: str
     sold: bool = False
     is_sale: bool = False
+    stock: int = 10
 
 class CartItem(BaseModel):
     product_id: int

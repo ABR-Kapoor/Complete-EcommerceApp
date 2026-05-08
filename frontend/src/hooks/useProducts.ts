@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
 
-export interface Product {
-  id: number;
-  title: string;
-  price: number;
-  description: string;
-  category: string;
-  image_url: string;
-  sold: boolean;
-  is_sale: boolean;
-}
+export type { Product } from "../types/product";
 
 export const useProducts = (category?: string, minPrice?: number, maxPrice?: number, search?: string) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -27,16 +18,21 @@ export const useProducts = (category?: string, minPrice?: number, maxPrice?: num
         if (search) params.append("search", search);
 
         const response = await api.get(`/api/products?${params}`);
-        setProducts(response.data);
+        const data = Array.isArray(response.data) ? response.data : response.data.data || [];
+        setProducts(data);
         setError(null);
       } catch (err: any) {
+        console.error("Products fetch error:", err);
         setError(err.message);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
+    const interval = setInterval(fetchProducts, 30000); // Real-time sync every 30s
+    return () => clearInterval(interval);
   }, [category, minPrice, maxPrice, search]);
 
   return { products, loading, error };
@@ -61,6 +57,8 @@ export const useProduct = (id: number) => {
     };
 
     fetchProduct();
+    const interval = setInterval(fetchProduct, 10000); // Sync every 10s for details
+    return () => clearInterval(interval);
   }, [id]);
 
   return { product, loading, error };

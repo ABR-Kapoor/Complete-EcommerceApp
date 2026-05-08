@@ -14,12 +14,13 @@ interface CartStore {
   items: CartItem[];
   addItem: (item: CartItem) => void;
   removeItem: (id: number) => void;
+  removeByProductIds: (productIds: number[]) => void;
   updateQuantity: (id: number, quantity: number) => void;
   clear: () => void;
   total: () => number;
 }
 
-export const useCartStore = create<CartStore>(
+export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
@@ -40,6 +41,10 @@ export const useCartStore = create<CartStore>(
       removeItem: (id) =>
         set((state) => ({
           items: state.items.filter((i) => i.id !== id),
+        })),
+      removeByProductIds: (productIds) =>
+        set((state) => ({
+          items: state.items.filter((i) => !productIds.includes(i.product_id)),
         })),
       updateQuantity: (id, quantity) =>
         set((state) => ({

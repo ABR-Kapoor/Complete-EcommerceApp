@@ -24,9 +24,11 @@ def create_review(user_id: str, review: Review):
 
 @router.get("/product/{product_id}")
 def get_product_reviews(product_id: int):
-    client = get_supabase_client()
-    data = client.table("reviews").select("*, orders(product_id)").filter("orders.product_id", "eq", product_id).execute()
-    return data.data or []
+    try:
+        client = get_supabase_client()
+        data = client.table("reviews").select("*, users(name, avatar_url)").eq("product_id", product_id).execute()
+        return data.data or []
+    except: return []
 
 @router.get("/order/{order_id}")
 def get_order_reviews(order_id: int):

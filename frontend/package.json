@@ -10,11 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.6",
     "@hookform/resolvers": "^5.2.2",
     "@supabase/supabase-js": "^2.105.3",
     "axios": "^1.16.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
+    "lucide-react": "^1.14.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-hook-form": "^7.75.0",

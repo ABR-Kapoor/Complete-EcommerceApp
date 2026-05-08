@@ -58,60 +58,53 @@ export default function OrdersPage() {
   if (loading) return <p>Loading...</p>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">My Orders</h1>
+    <div>
+      <div className="page-section">
+        <p className="panel-copy">Orders</p>
+        <h1 className="section-title">My orders</h1>
+      </div>
 
       {orders.length === 0 ? (
-        <p className="text-gray-600">No orders yet</p>
+        <div className="empty-state">
+          <div className="stack" style={{ placeItems: "center" }}>
+            <p className="empty-title">No orders yet</p>
+            <p className="empty-copy">Your first great checkout will show up here.</p>
+          </div>
+        </div>
       ) : (
-        <div className="space-y-4">
+        <div className="order-list">
           {orders.map((order) => (
-            <div key={order.id} className="border rounded-lg p-4 bg-white">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-bold">Order #{order.id}</p>
-                  <p className="text-gray-600 text-sm">{new Date(order.created_at).toLocaleDateString()}</p>
-                  <p className="text-sm mt-1">Method: {order.payment_method.toUpperCase()}</p>
+            <article key={order.id} className="order-card">
+              <div className="row-between" style={{ alignItems: "start" }}>
+                <div className="stack">
+                  <h3 className="order-title">Order #{order.id}</h3>
+                  <p className="muted small">{new Date(order.created_at).toLocaleDateString()}</p>
+                  <span className="badge new">{order.payment_method.toUpperCase()}</span>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold">₹{order.total_price.toFixed(2)}</p>
-                  <span className={`inline-block px-3 py-1 rounded text-sm font-semibold ${
-                    order.status === "delivered" ? "bg-green-500 text-white" :
-                    order.status === "cancelled" ? "bg-red-500 text-white" :
-                    order.status === "shipped" ? "bg-blue-500 text-white" :
-                    "bg-yellow-500 text-white"
-                  }`}>
-                    {order.status.toUpperCase()}
+                <div className="stack" style={{ alignItems: "end" }}>
+                  <strong className="price">₹{order.total_price.toFixed(2)}</strong>
+                  <span className={`status-badge ${order.status === "delivered" ? "status-delivered" : order.status === "cancelled" ? "status-cancelled" : order.status === "shipped" ? "status-shipped" : "status-pending"}`}>
+                    {order.status}
                   </span>
                 </div>
               </div>
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => setSelectedOrder({ order, items: [] })}
-                  className="text-blue-600 hover:underline"
-                >
-                  View Details
-                </button>
-                {canCancel(order.status) && (
-                  <button
-                    onClick={() => cancelOrder(order.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Cancel Order
-                  </button>
-                )}
+              <div className="card-actions">
+                <button onClick={() => setSelectedOrder({ order, items: [] })} className="btn btn-ghost">View details</button>
+                {canCancel(order.status) && <button onClick={() => cancelOrder(order.id)} className="btn btn-danger">Cancel order</button>}
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
 
       {selectedOrder && (
-        <div className="mt-8 border-t pt-8">
-          <h2 className="text-2xl font-bold mb-4">Order Details - #{selectedOrder.order.id}</h2>
-          <p>Status: {selectedOrder.order.status}</p>
-          <p>Total: ₹{selectedOrder.order.total_price.toFixed(2)}</p>
-        </div>
+        <section className="detail-card page-section">
+          <h2 className="panel-title">Order details · #{selectedOrder.order.id}</h2>
+          <div className="stack">
+            <p className="muted">Status: {selectedOrder.order.status}</p>
+            <p className="muted">Total: ₹{selectedOrder.order.total_price.toFixed(2)}</p>
+          </div>
+        </section>
       )}
     </div>
   );
