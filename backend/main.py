@@ -10,6 +10,13 @@ from app.routes import products, cart, wishlist, reviews, users, admin
 
 load_dotenv()
 
+# Vercel-specific fix for Supabase/httpx proxy error
+import os
+os.environ.pop("HTTP_PROXY", None)
+os.environ.pop("HTTPS_PROXY", None)
+os.environ.pop("http_proxy", None)
+os.environ.pop("https_proxy", None)
+
 app = FastAPI(title="ABR Ecommerce API")
 
 app.add_middleware(
