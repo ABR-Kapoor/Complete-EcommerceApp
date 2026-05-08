@@ -81,6 +81,10 @@ export const Checkout = () => {
           ondismiss: () => reject(new Error("Payment cancelled")),
         },
       };
+      if (!window.Razorpay) {
+        reject(new Error("Razorpay SDK not loaded. Please check your internet connection."));
+        return;
+      }
       const rzp = new window.Razorpay(options);
       rzp.open();
     });
@@ -117,10 +121,11 @@ export const Checkout = () => {
           clearCart();
           navigate(`/order-success/${response.data.order_id}`);
         } catch (payErr: any) {
+          console.error("Payment Step Error:", payErr);
           if (payErr.message === "Payment cancelled") {
             setError("Payment was cancelled. Order was not placed.");
           } else {
-            setError("Payment failed. Please try again.");
+            setError(payErr.message || "Payment failed. Please try again.");
           }
         }
       } else {
