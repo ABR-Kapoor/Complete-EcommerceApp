@@ -49,7 +49,7 @@ const emptyProduct: Omit<Product, "id"> = {
 };
 
 export const Admin = () => {
-  const { user, isLoaded } = useUser();
+  const { isLoaded } = useUser();
   const { profile } = useUserStore();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"dashboard" | "products" | "orders" | "users">("dashboard");
