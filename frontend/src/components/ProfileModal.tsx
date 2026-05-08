@@ -9,8 +9,6 @@ interface ProfileModalProps {
   onClose: () => void;
 }
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
-
 export default function ProfileModal({ onClose }: ProfileModalProps) {
   const { user } = useUser();
   const { signOut } = useClerk();
@@ -24,7 +22,7 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const isAdmin = user?.emailAddresses?.some(e => e.emailAddress === ADMIN_EMAIL);
+  const isAdmin = profile?.role === "admin";
 
   useEffect(() => {
     if (user?.id) {

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import ProfileModal from "./ProfileModal";
 import { ShoppingCart, Package, Zap } from "lucide-react";
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+
 
 interface NavbarProps {
   adminMode?: boolean;
@@ -16,7 +16,7 @@ interface NavbarProps {
 
 export const Navbar = ({ adminMode, activeTab, onTabChange }: NavbarProps) => {
   const { user, isSignedIn } = useUser();
-  const { profile, fetchProfile } = useUserStore();
+  const { profile, fetchProfile, loading: profileLoading } = useUserStore();
   const cartItems = useCartStore((state) => state.items);
   const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
@@ -24,9 +24,8 @@ export const Navbar = ({ adminMode, activeTab, onTabChange }: NavbarProps) => {
 
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0);
 
-  const isAdmin =
-    user?.publicMetadata?.role === "admin" ||
-    user?.emailAddresses.some((e) => e.emailAddress === ADMIN_EMAIL);
+  // Consider it admin if the profile says so AND we aren't currently loading a stale state
+  const isAdmin = profile?.role === "admin" && !profileLoading;
 
   useEffect(() => {
     if (user?.id) fetchProfile(user.id);

@@ -2,11 +2,12 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import api from "../lib/api";
+import { useUserStore } from "../store/userStore";
 import { Navbar } from "../components/Navbar";
 import { CustomDropdown } from "../components/CustomDropdown";
 import { Loader2, Upload, Trash2, Edit3, Package, FileText, Tag, Box } from "lucide-react";
 
-const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
+
 
 const STATUS_OPTIONS = [
   { value: "pending_payment", label: "Pending Payment", color: "#f59e0b" },
@@ -49,6 +50,7 @@ const emptyProduct: Omit<Product, "id"> = {
 
 export const Admin = () => {
   const { user, isLoaded } = useUser();
+  const { profile } = useUserStore();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"dashboard" | "products" | "orders" | "users">("dashboard");
   const [products, setProducts] = useState<Product[]>([]);
@@ -64,9 +66,7 @@ export const Admin = () => {
   const [orderDetail, setOrderDetail] = useState<any>(null);
   const imageRef = useRef<HTMLInputElement>(null);
 
-  const isAdmin =
-    user?.publicMetadata?.role === "admin" ||
-    user?.emailAddresses.some((e) => e.emailAddress === ADMIN_EMAIL);
+  const isAdmin = profile?.role === "admin";
 
   useEffect(() => {
     if (isLoaded && !isAdmin) navigate("/");

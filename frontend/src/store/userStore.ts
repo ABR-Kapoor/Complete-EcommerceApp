@@ -13,6 +13,7 @@ interface UserProfile {
 
 interface UserStore {
   profile: UserProfile | null;
+  loading: boolean;
   setProfile: (profile: UserProfile | null) => void;
   fetchProfile: (userId: string) => Promise<void>;
 }
@@ -21,8 +22,10 @@ export const useUserStore = create<UserStore>()(
   persist(
     (set) => ({
       profile: null,
+      loading: false,
       setProfile: (profile) => set({ profile }),
       fetchProfile: async (userId) => {
+        set({ loading: true });
         try {
           const res = await api.get(`/api/users/${userId}`);
           if (res.data) {
@@ -30,6 +33,8 @@ export const useUserStore = create<UserStore>()(
           }
         } catch (e) {
           console.error("Failed to fetch user profile", e);
+        } finally {
+          set({ loading: false });
         }
       },
     }),

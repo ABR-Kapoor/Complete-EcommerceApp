@@ -17,19 +17,22 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
     try:
         existing = client.table("users").select("*").eq("id", user_id).maybe_single().execute()
         email = data.get("email", "")
-        role = "admin" if email == os.getenv("ADMIN_EMAIL") else "user"
         payload = {
             "name": data.get("name"),
             "email": email,
             "phone": data.get("phone"),
-            "avatar_url": data.get("avatar_url"),
-            "role": role
+            "avatar_url": data.get("avatar_url")
         }
+        
         if existing.data:
+            # Update existing user but DON'T overwrite the role
             client.table("users").update(payload).eq("id", user_id).execute()
         else:
+            # New user: set default role to 'user'
             payload["id"] = user_id
+            payload["role"] = "user"
             client.table("users").insert(payload).execute()
+        
         return {"status": "ok", "user_id": user_id}
     except Exception as e:
         print(f"Profile Sync Error: {e}")

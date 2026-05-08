@@ -30,7 +30,7 @@ export const Cart = () => {
   }
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ fontFamily: "Inter, sans-serif", background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)", minHeight: "100vh" }}>
       <Navbar />
 
 
@@ -54,13 +54,13 @@ export const Cart = () => {
                        <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#1e293b" }}>{item.title}</h3>
                        <p className="muted small" style={{ marginTop: 4 }}>Unit Price: ₹{item.price.toLocaleString()}</p>
                     </div>
-                    <button onClick={() => removeItem(item.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: "1.2rem", padding: 4 }}>✕</button>
+                    <button onClick={() => removeItem(item.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: "1.2rem", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                   </div>
                   <div className="row-between" style={{ marginTop: 12 }}>
-                     <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#f8fafc", padding: "4px 8px", borderRadius: 10 }}>
-                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800 }}>-</button>
+                     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", padding: "2px 6px", borderRadius: 10, height: 36 }}>
+                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>-</button>
                         <span style={{ minWidth: 24, textAlign: "center", fontWeight: 800 }}>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800 }}>+</button>
+                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                      </div>
                      <div style={{ fontWeight: 900, color: "#1e293b", fontSize: "1.1rem" }}>₹{(item.price * item.quantity).toLocaleString()}</div>
                   </div>
