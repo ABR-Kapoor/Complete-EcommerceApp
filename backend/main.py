@@ -14,7 +14,11 @@ app = FastAPI(title="ABR Ecommerce API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://abrcom-done.vercel.app",
+        "https://complete-ecommerce-app-3ytm.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
