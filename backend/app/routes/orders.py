@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Body
 from app.db import get_supabase_admin
 from typing import Dict, Any
 import traceback
+import os
 
 router = APIRouter(tags=["orders"])
 
@@ -22,7 +23,7 @@ def create_order(data: dict = Body(...)):
                 "id": uid,
                 "email": email,
                 "name": name,
-                "role": "admin" if email == "abrmkprm@gmail.com" else "user",
+                "role": "admin" if email == os.getenv("ADMIN_EMAIL") else "user",
                 "phone": data.get("phone")
             }, on_conflict="id").execute()
         except Exception as ue:

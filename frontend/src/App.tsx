@@ -19,7 +19,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoaded, isSignedIn } = useUser();
   if (!isLoaded) return null;
-  const isAdmin = user?.publicMetadata?.role === "admin" || user?.emailAddresses.some(e => e.emailAddress === "abrmkprm@gmail.com");
+  const isAdmin = user?.publicMetadata?.role === "admin" || user?.emailAddresses.some(e => e.emailAddress === import.meta.env.VITE_ADMIN_EMAIL);
   return isSignedIn && isAdmin ? <>{children}</> : <Navigate to="/" />;
 }
 

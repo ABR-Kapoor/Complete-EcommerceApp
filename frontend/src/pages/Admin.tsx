@@ -4,9 +4,9 @@ import { useUser } from "@clerk/clerk-react";
 import api from "../lib/api";
 import { Navbar } from "../components/Navbar";
 import { CustomDropdown } from "../components/CustomDropdown";
-import { Loader2, CheckCircle2, Upload, Trash2, Edit3, Plus, ArrowLeft, Package, FileText, Tag, Box } from "lucide-react";
+import { Loader2, Upload, Trash2, Edit3, Package, FileText, Tag, Box } from "lucide-react";
 
-const ADMIN_EMAIL = "abrmkprm@gmail.com";
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 const STATUS_OPTIONS = [
   { value: "pending_payment", label: "Pending Payment", color: "#f59e0b" },
@@ -18,16 +18,6 @@ const STATUS_OPTIONS = [
   { value: "refunded", label: "Refunded", color: "#f97316" },
 ];
 
-const CATEGORY_OPTIONS = [
-  { value: "Electronics", label: "Electronics" },
-  { value: "Clothing", label: "Clothing" },
-  { value: "Home", label: "Home" },
-  { value: "Books", label: "Books" },
-  { value: "Sports", label: "Sports" },
-  { value: "Beauty", label: "Beauty" },
-  { value: "Toys", label: "Toys" },
-  { value: "Food", label: "Food" },
-];
 
 const STATUS_COLORS: Record<string, string> = {
   pending_payment: "#f59e0b",
@@ -141,6 +131,7 @@ export const Admin = () => {
     }
   };
 
+  /* 
   const handleImageUpload = async (productId: number, file: File) => {
     const form = new FormData();
     form.append("file", file);
@@ -154,6 +145,7 @@ export const Admin = () => {
       return "";
     }
   };
+  */
 
   const openEdit = async (id: number) => {
     try {

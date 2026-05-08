@@ -6,7 +6,7 @@ import { useUser } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import api from "../lib/api";
 import { Navbar } from "../components/Navbar";
-import { Tag, Heart, MessageSquare, Star, Check, ArrowLeft, ShoppingBag } from "lucide-react";
+import { Tag, Heart, MessageSquare, Star } from "lucide-react";
 
 interface Review {
   id: number;

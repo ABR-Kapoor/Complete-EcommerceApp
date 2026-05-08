@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
 
-export type { Product } from "../types/product";
+import type { Product } from "../types/product";
 
 export const useProducts = (category?: string, minPrice?: number, maxPrice?: number, search?: string) => {
   const [products, setProducts] = useState<Product[]>([]);

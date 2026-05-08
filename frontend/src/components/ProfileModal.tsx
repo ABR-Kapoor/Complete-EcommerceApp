@@ -3,13 +3,13 @@ import { useUser, useClerk } from "@clerk/clerk-react";
 import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/userStore";
-import { User as UserIcon, Mail, Phone, CreditCard, MapPin, Package, Zap, LogOut, X, Loader2 } from "lucide-react";
+import { User as UserIcon, Mail, Phone, MapPin, Package, Zap, LogOut, X, Loader2 } from "lucide-react";
 
 interface ProfileModalProps {
   onClose: () => void;
 }
 
-const ADMIN_EMAIL = "abrmkprm@gmail.com";
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 export default function ProfileModal({ onClose }: ProfileModalProps) {
   const { user } = useUser();
@@ -52,7 +52,7 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
     setSaving(true);
     try {
       // 1. Sync to our local database (Primary Source of Truth)
-      const updates = { name, phone, email: user.primaryEmailAddress?.emailAddress };
+      const updates = { name, phone, email: user.primaryEmailAddress?.emailAddress || "" };
       await api.put(`/api/users/${user.id}`, updates);
       
       // Update local store immediately

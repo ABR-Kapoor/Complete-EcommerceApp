@@ -4,7 +4,7 @@ import { useCartStore } from "../store/cartStore";
 import { useUser } from "@clerk/clerk-react";
 import api from "../lib/api";
 import { Navbar } from "../components/Navbar";
-import { Check, Truck, DollarSign, CreditCard, AlertCircle, ArrowLeft, ArrowRight } from "lucide-react";
+import { Check, Truck, DollarSign, CreditCard } from "lucide-react";
 
 declare global {
   interface Window {

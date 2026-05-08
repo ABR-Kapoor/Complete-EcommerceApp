@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Body
 from app.db import get_supabase_client, get_supabase_admin
 from typing import Dict, Any
 import traceback
+import os
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -16,7 +17,7 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
     try:
         existing = client.table("users").select("*").eq("id", user_id).maybe_single().execute()
         email = data.get("email", "")
-        role = "admin" if email == "abrmkprm@gmail.com" else "user"
+        role = "admin" if email == os.getenv("ADMIN_EMAIL") else "user"
         payload = {
             "name": data.get("name"),
             "email": email,

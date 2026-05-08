@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import ProfileModal from "./ProfileModal";
 import { ShoppingCart, Package, Heart, Zap, User as UserIcon } from "lucide-react";
 
-const ADMIN_EMAIL = "abrmkprm@gmail.com";
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL;
 
 interface NavbarProps {
   adminMode?: boolean;
