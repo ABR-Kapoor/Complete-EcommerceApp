@@ -15,16 +15,17 @@ def create_order(data: dict = Body(...)):
         
         email = data.get("email", "unknown@email.com")
         
-        # 1. Sync User Profile
+        # 1. Sync User Profile (Safety)
         try:
             name = data.get("name") or email.split("@")[0]
-            client.table("users").upsert({
+            # Don't overwrite the role if user exists
+            user_payload = {
                 "id": uid,
                 "email": email,
                 "name": name,
-                "role": "admin" if email == os.getenv("ADMIN_EMAIL") else "user",
                 "phone": data.get("phone")
-            }, on_conflict="id").execute()
+            }
+            client.table("users").upsert(user_payload, on_conflict="id").execute()
         except Exception as ue:
             print(f"User upsert failed (non-critical): {ue}")
             
@@ -38,11 +39,15 @@ def create_order(data: dict = Body(...)):
                 print(f"Address save failed (non-critical): {ae}")
         
         # 3. Create Main Order Record
+        status = data.get("status")
+        if not status:
+            status = "confirmed" if data.get("payment_method") == "COD" else "pending_payment"
+
         order_payload = {
             "user_id": uid,
             "total_price": data.get("total_price", 0),
             "payment_method": data.get("payment_method", "COD"),
-            "status": "confirmed" if data.get("payment_method") == "COD" else "pending_payment"
+            "status": status
         }
         order_res = client.table("orders").insert(order_payload).execute()
         if not order_res.data:

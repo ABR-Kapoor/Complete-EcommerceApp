@@ -62,6 +62,10 @@ export const Checkout = () => {
 
   const handleRazorpayPayment = (orderId: number) => {
     return new Promise<void>((resolve, reject) => {
+      if (!RAZORPAY_KEY) {
+        reject(new Error("VITE_RAZORPAY_KEY_ID is missing from environment. Please restart your dev server."));
+        return;
+      }
       const options = {
         key: RAZORPAY_KEY,
         amount: Math.round(total * 100),
