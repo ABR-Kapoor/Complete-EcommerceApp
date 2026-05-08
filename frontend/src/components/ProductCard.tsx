@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import type { Product } from "../types/product";
-import { Heart, Loader2, Check } from "lucide-react";
+import { Heart, Loader2, Check, Tag } from "lucide-react";
 import { useState } from "react";
 
 interface ProductCardProps {
@@ -64,6 +64,16 @@ export const ProductCard = ({
             (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(product.title)}&size=400&background=f8fafc&color=6366f1&bold=true&format=png`;
           }}
         />
+        {product.is_sale && (
+          <div style={{
+            position: "absolute", top: 16, left: 16, background: "#ef4444", color: "#fff",
+            padding: "6px 14px", borderRadius: 10, fontSize: "0.75rem", fontWeight: 800,
+            display: "flex", alignItems: "center", gap: 6, boxShadow: "0 8px 20px rgba(239, 68, 68, 0.3)",
+            zIndex: 10
+          }}>
+            <Tag size={12} fill="currentColor" /> SALE
+          </div>
+        )}
       </Link>
 
       <div className="product-body" style={{ 
