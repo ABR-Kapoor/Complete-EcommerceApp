@@ -47,7 +47,6 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
           city: res.data.city || "",
           state: res.data.state || "",
           zip_code: res.data.zip_code || "",
-          phone: res.data.phone || "",
         });
       }
     }).catch(() => {});
