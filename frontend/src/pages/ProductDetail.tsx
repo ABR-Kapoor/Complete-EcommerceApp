@@ -35,9 +35,6 @@ export default function ProductDetail() {
 
   const inCart = cartItems.some(i => product && i.product_id === product.id);
 
-  const [simulatedStock, setSimulatedStock] = useState(0);
-  const [simulatedPrice, setSimulatedPrice] = useState(0);
-
   // Review Form State
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
@@ -280,7 +277,7 @@ export default function ProductDetail() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                         <span style={{ fontWeight: 800, fontSize: "0.85rem", color: "#1e293b" }}>@{r.users?.name?.replace(/\s+/g, '').toLowerCase() || "user"}</span>
                         <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>{new Date(r.created_at).toLocaleDateString()}</span>
-                        <BadgeCheck size={14} color="#10b981" fill="#f0fdf4" style={{ marginLeft: 4 }} title="Verified Purchase" />
+                        <BadgeCheck size={14} color="#10b981" fill="#f0fdf4" style={{ marginLeft: 4 }} />
                         <div style={{ display: "flex", gap: 2, marginLeft: 8 }}>
                           {[...Array(5)].map((_, i) => (
                             <Star key={i} size={10} fill={i < r.rating ? "#f59e0b" : "none"} color={i < r.rating ? "#f59e0b" : "#f1f5f9"} />

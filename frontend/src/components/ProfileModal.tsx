@@ -18,7 +18,7 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
   const [name, setName] = useState(profile?.name || user?.fullName || user?.firstName || "");
   const [phone, setPhone] = useState(profile?.phone || "");
   const [paymentMethod, setPaymentMethod] = useState<string>(user?.unsafeMetadata?.paymentMethod as string || "COD");
-  const [address, setAddress] = useState({ street: "", city: "", state: "", zip_code: "" });
+  const [address, setAddress] = useState({ street: "", city: "", state: "", zip_code: "", phone: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
