@@ -18,13 +18,15 @@ def create_order(data: dict = Body(...)):
         # 1. Sync User Profile (Safety)
         try:
             name = data.get("name") or email.split("@")[0]
-            # Don't overwrite the role if user exists
             user_payload = {
                 "id": uid,
                 "email": email,
-                "name": name,
-                "phone": data.get("phone")
+                "name": name
             }
+            # Only include phone if it's provided in the order data
+            if data.get("phone"):
+                user_payload["phone"] = data.get("phone")
+                
             client.table("users").upsert(user_payload, on_conflict="id").execute()
         except Exception as ue:
             print(f"User upsert failed (non-critical): {ue}")
@@ -33,8 +35,13 @@ def create_order(data: dict = Body(...)):
         address = data.get("address")
         if address:
             try:
-                addr_data = {**address, "user_id": uid}
-                client.table("addresses").upsert(addr_data, on_conflict="user_id").execute()
+                addr_data = { "user_id": uid }
+                for key in ["street", "city", "state", "zip_code", "phone"]:
+                    if address.get(key):
+                        addr_data[key] = address.get(key)
+                
+                if len(addr_data) > 1: # More than just user_id
+                    client.table("addresses").upsert(addr_data, on_conflict="user_id").execute()
             except Exception as ae:
                 print(f"Address save failed (non-critical): {ae}")
         

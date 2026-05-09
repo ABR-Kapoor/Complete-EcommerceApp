@@ -39,17 +39,29 @@ export const Checkout = () => {
 
   useEffect(() => {
     if (user) {
+      // 1. Fetch saved address
       api.get(`/api/users/${user.id}/address`).then(res => {
         if (res.data && Object.keys(res.data).length > 0) {
-          setAddress({
+          setAddress(prev => ({
+            ...prev,
             street: res.data.street || "",
             city: res.data.city || "",
             state: res.data.state || "",
             zip_code: res.data.zip_code || "",
-            phone: res.data.phone || "",
-          });
+            phone: res.data.phone || prev.phone,
+          }));
         }
       }).catch(err => console.error("Failed to fetch address", err));
+
+      // 2. Fetch primary phone from profile if missing
+      api.get(`/api/users/${user.id}`).then(res => {
+        if (res.data?.phone) {
+          setAddress(prev => ({
+            ...prev,
+            phone: prev.phone || res.data.phone
+          }));
+        }
+      }).catch(() => {});
     }
   }, [user]);
 

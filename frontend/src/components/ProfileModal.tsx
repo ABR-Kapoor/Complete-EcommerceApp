@@ -18,7 +18,7 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
   const [name, setName] = useState(profile?.name || user?.fullName || user?.firstName || "");
   const [phone, setPhone] = useState(profile?.phone || "");
   const [paymentMethod, setPaymentMethod] = useState<string>(user?.unsafeMetadata?.paymentMethod as string || "COD");
-  const [address, setAddress] = useState({ street: "", city: "", state: "", zip_code: "", phone: "" });
+  const [address, setAddress] = useState({ street: "", city: "", state: "", zip_code: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -41,7 +41,15 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
     if (!user) return;
     // Fetch saved address
     api.get(`/api/users/${user.id}/address`).then(res => {
-      if (res.data) setAddress(res.data);
+      if (res.data && Object.keys(res.data).length > 0) {
+        setAddress({
+          street: res.data.street || "",
+          city: res.data.city || "",
+          state: res.data.state || "",
+          zip_code: res.data.zip_code || "",
+          phone: res.data.phone || "",
+        });
+      }
     }).catch(() => {});
   }, [user]);
 
@@ -72,7 +80,8 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
     if (!user) return;
     setSaving(true);
     try {
-      await updateAddress(user.id, address);
+      // Sync the primary phone into the address update as well
+      await updateAddress(user.id, { ...address, phone });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -204,14 +213,10 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
                       <input className="input" value={address.state} onChange={e => setAddress(a => ({ ...a, state: e.target.value }))} placeholder="State" style={{ borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0", color: "#1e293b" }} />
                     </div>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
                     <div className="field">
                       <label className="label" style={{ fontWeight: 800, fontSize: "0.8rem", color: "#475569", letterSpacing: "0.05em" }}>ZIP CODE</label>
                       <input className="input" value={address.zip_code} onChange={e => setAddress(a => ({ ...a, zip_code: e.target.value }))} placeholder="Zip" style={{ borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0", color: "#1e293b" }} />
-                    </div>
-                    <div className="field">
-                      <label className="label" style={{ fontWeight: 800, fontSize: "0.8rem", color: "#475569", letterSpacing: "0.05em" }}>LOGISTICS PHONE</label>
-                      <input className="input" value={address.phone} onChange={e => setAddress(a => ({ ...a, phone: e.target.value }))} placeholder="Phone" style={{ borderRadius: 16, background: "#fff", border: "1px solid #e2e8f0", color: "#1e293b" }} />
                     </div>
                   </div>
                 </div>

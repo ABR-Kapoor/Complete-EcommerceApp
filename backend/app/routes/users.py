@@ -20,9 +20,12 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
         payload = {
             "name": data.get("name"),
             "email": email,
-            "phone": data.get("phone"), # Capture phone from Clerk sync if available
             "avatar_url": data.get("avatar_url")
         }
+        
+        # Only include phone if it's not null/empty to avoid overwriting existing data
+        if data.get("phone"):
+            payload["phone"] = data.get("phone")
         
         if existing.data:
             # Update existing user but DON'T overwrite the role
@@ -76,6 +79,10 @@ def save_user_address(user_id: str, address: Dict[str, Any] = Body(...)):
             "state": address.get("state"),
             "zip_code": address.get("zip_code")
         }
+        # Only include phone if provided
+        if address.get("phone"):
+            payload["phone"] = address.get("phone")
+            
         client.table("addresses").upsert(payload, on_conflict="user_id").execute()
         return {"status": "ok"}
     except Exception as e:
@@ -87,7 +94,7 @@ def update_user(user_id: str, updates: Dict[str, Any] = Body(...)):
     """Update user profile with real-time persistence"""
     client = get_supabase_admin()
     try:
-        allowed = {k: v for k, v in updates.items() if k in ("name", "phone", "avatar_url", "email")}
+        allowed = {k: v for k, v in updates.items() if k in ("name", "phone", "avatar_url", "email") and v}
         if allowed:
             client.table("users").update(allowed).eq("id", user_id).execute()
         return {"status": "ok"}
