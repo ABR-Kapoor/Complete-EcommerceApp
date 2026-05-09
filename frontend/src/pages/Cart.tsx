@@ -1,15 +1,26 @@
 import { useCartStore } from "../store/cartStore";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "../components/Navbar";
+import { useUser } from "@clerk/clerk-react";
+import { useEffect } from "react";
 
 export const Cart = () => {
+  const { user, isLoaded } = useUser();
   const items = useCartStore((state) => state.items);
+  const fetchCart = useCartStore((state) => state.fetchCart);
   const removeItem = useCartStore((state) => state.removeItem);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const total = useCartStore((state) => state.total)();
   const navigate = useNavigate();
 
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  // Sync on mount
+  useEffect(() => {
+    if (isLoaded && user?.id) {
+      fetchCart(user.id);
+    }
+  }, [isLoaded, user?.id, fetchCart]);
 
   if (items.length === 0) {
     return (
@@ -54,13 +65,13 @@ export const Cart = () => {
                        <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#1e293b" }}>{item.title}</h3>
                        <p className="muted small" style={{ marginTop: 4 }}>Unit Price: ₹{item.price.toLocaleString()}</p>
                     </div>
-                    <button onClick={() => removeItem(item.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: "1.2rem", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                    <button onClick={() => removeItem(item.id, user?.id)} style={{ border: "none", background: "transparent", cursor: "pointer", color: "#ef4444", fontSize: "1.2rem", padding: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
                   </div>
                   <div className="row-between" style={{ marginTop: 12 }}>
                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#f8fafc", padding: "2px 6px", borderRadius: 10, height: 36 }}>
-                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>-</button>
+                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1), user?.id)} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>-</button>
                         <span style={{ minWidth: 24, textAlign: "center", fontWeight: 800 }}>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                        <button onClick={() => updateQuantity(item.id, item.quantity + 1, user?.id)} style={{ width: 28, height: 28, border: "none", background: "#fff", borderRadius: 6, cursor: "pointer", fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                      </div>
                      <div style={{ fontWeight: 900, color: "#1e293b", fontSize: "1.1rem" }}>₹{(item.price * item.quantity).toLocaleString()}</div>
                   </div>

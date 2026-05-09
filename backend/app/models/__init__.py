@@ -3,6 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 
 class Product(BaseModel):
+    id: Optional[int] = None
     title: str
     price: float
     description: str
@@ -10,6 +11,7 @@ class Product(BaseModel):
     image_url: str
     sold: bool = False
     is_sale: bool = False
+    stock: int = 10
 
 class CartItem(BaseModel):
     product_id: int
@@ -28,11 +30,13 @@ class Order(BaseModel):
     status: str = "pending_payment"
 
 class Review(BaseModel):
-    order_id: int
+    order_id: Optional[int] = None
+    product_id: int
     rating: int
     text: str
 
 class UserProfile(BaseModel):
+    id: Optional[str] = None
     name: str
     email: str
     phone: str

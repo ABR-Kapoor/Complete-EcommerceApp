@@ -9,8 +9,8 @@ interface ProductCardProps {
   inCart: boolean;
   inWishlist: boolean;
   justAdded?: boolean;
-  onAddToCart: (product: Product) => void;
-  onToggleWishlist: (productId: number) => void;
+  onAddToCart: (product: Product, userId?: string) => void;
+  onToggleWishlist: (productId: number, userId?: string) => void;
 }
 
 export const ProductCard = ({ 
@@ -20,7 +20,7 @@ export const ProductCard = ({
   onAddToCart, 
   onToggleWishlist 
 }: ProductCardProps) => {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
@@ -29,9 +29,8 @@ export const ProductCard = ({
     if (product.stock <= 0 || loading) return;
     
     setLoading(true);
-    // Simulate/Wait for the store action if it's async (usually it is sync but we want visual feedback)
-    await onAddToCart(product);
-    setTimeout(() => setLoading(false), 600); // Keep spinner for a moment for "experience"
+    await onAddToCart(product, user?.id);
+    setTimeout(() => setLoading(false), 600);
   };
 
   return (
@@ -174,7 +173,7 @@ export const ProductCard = ({
             onClick={(e) => {
               e.preventDefault();
               if (!isSignedIn) { navigate("/login"); return; }
-              onToggleWishlist(product.id);
+              onToggleWishlist(product.id, user?.id);
             }}
             style={{ 
               width: "54px", 

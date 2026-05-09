@@ -81,6 +81,20 @@ def create_order(data: dict = Body(...)):
                 print(f"Stock sync failed for product {pid}: {se}")
 
         client.table("order_items").insert(formatted_items).execute()
+
+        # 5. Create Payment Record (Normalization)
+        if data.get("payment_method") == "Razorpay":
+            try:
+                payment_payload = {
+                    "order_id": oid,
+                    "amount": data.get("total_price", 0),
+                    "status": "completed",
+                    "razorpay_id": data.get("razorpay_payment_id", "N/A") # You should pass this from frontend
+                }
+                client.table("payments").insert(payment_payload).execute()
+            except Exception as pe:
+                print(f"Payment record creation failed: {pe}")
+
         return {"status": "ok", "order_id": oid}
         
     except Exception as e:
