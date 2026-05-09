@@ -45,8 +45,10 @@ export default function ProductDetail() {
 
   // Time Utility
   const getTimeAgo = (dateStr: string) => {
+    if (!dateStr) return "just now";
     const now = new Date();
-    const past = new Date(dateStr);
+    // Ensure UTC interpretation by appending Z if missing
+    const past = new Date(dateStr.includes('T') ? (dateStr.endsWith('Z') ? dateStr : dateStr + 'Z') : dateStr.replace(' ', 'T') + 'Z');
     const seconds = Math.floor((now.getTime() - past.getTime()) / 1000);
     
     if (seconds < 60) return "just now";
