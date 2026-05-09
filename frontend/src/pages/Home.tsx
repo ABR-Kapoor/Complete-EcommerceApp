@@ -21,7 +21,7 @@ export const Home = () => {
   const cartItems = useCartStore((state) => state.items);
   const wishlist = useWishlistStore((state) => state.items);
   const toggleWishlist = useWishlistStore((state) => state.toggle);
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const navigate = useNavigate();
   const [featured, setFeatured] = useState<typeof products>([]);
 
@@ -61,7 +61,14 @@ export const Home = () => {
   const handleAddToCart = (product: typeof products[0]) => {
     if (!isSignedIn) { navigate("/login"); return; }
     if (product.stock <= 0) return;
-    addToCart({ id: product.id, product_id: product.id, quantity: 1, title: product.title, price: product.price, image_url: product.image_url });
+    addToCart({ 
+      id: Date.now(), // Temp ID for local display
+      product_id: product.id, 
+      quantity: 1, 
+      title: product.title, 
+      price: product.price, 
+      image_url: product.image_url 
+    }, user?.id);
     setCartFeedback(product.id);
     setTimeout(() => setCartFeedback(null), 1400);
   };

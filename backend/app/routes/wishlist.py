@@ -1,11 +1,11 @@
 from fastapi import APIRouter
-from app.db import get_supabase_client
+from app.db import get_supabase_admin
 
 router = APIRouter(prefix="/api/wishlist", tags=["wishlist"])
 
 @router.get("/{user_id}")
 def get_wishlist(user_id: str):
-    client = get_supabase_client()
+    client = get_supabase_admin()
     data = client.table("wishlists").select("product_id").eq("user_id", user_id).execute()
     return [item["product_id"] for item in data.data or []]
 

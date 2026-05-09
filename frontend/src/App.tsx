@@ -10,6 +10,8 @@ import { Admin } from "./pages/Admin";
 import { OrderSuccess } from "./pages/OrderSuccess";
 import { Wishlist } from "./pages/Wishlist";
 import { useUserStore } from "./store/userStore";
+import { useCartStore } from "./store/cartStore";
+import { useWishlistStore } from "./store/wishlistStore";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -40,11 +42,11 @@ import api from "./lib/api";
 function UserSync() {
   const { user, isSignedIn } = useUser();
   const { profile, fetchProfile } = useUserStore();
+  const { fetchCart } = useCartStore();
+  const { fetchWishlist } = useWishlistStore();
 
   useEffect(() => {
     const sync = async () => {
-      // ONLY sync if we don't have a profile yet or if the ID mismatches
-      // This prevents Clerk from overwriting manual Supabase changes on every load
       if (isSignedIn && user && (!profile || profile.id !== user.id)) {
         try {
           await api.post("/api/users/sync", {
@@ -53,14 +55,16 @@ function UserSync() {
             name: user.fullName || user.username || user.primaryEmailAddress?.emailAddress?.split("@")[0],
             avatar_url: user.imageUrl,
           });
-          fetchProfile(user.id);
+          await fetchProfile(user.id);
+          await fetchCart(user.id);
+          await fetchWishlist(user.id);
         } catch (err) {
           console.error("User sync failed:", err);
         }
       }
     };
     sync();
-  }, [isSignedIn, user, fetchProfile, profile]);
+  }, [isSignedIn, user, fetchProfile, fetchCart, fetchWishlist, profile]);
 
   return null;
 }

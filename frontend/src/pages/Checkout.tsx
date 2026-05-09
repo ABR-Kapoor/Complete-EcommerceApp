@@ -61,7 +61,7 @@ export const Checkout = () => {
   };
 
   const handleRazorpayPayment = (orderId: number) => {
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
       if (!RAZORPAY_KEY) {
         reject(new Error("VITE_RAZORPAY_KEY_ID is missing from environment. Please restart your dev server."));
         return;
@@ -72,8 +72,8 @@ export const Checkout = () => {
         currency: "INR",
         name: "ABR Ecommerce",
         description: `Order #${orderId}`,
-        handler: function () {
-          resolve();
+        handler: function (response: any) {
+          resolve(response);
         },
         prefill: {
           name: user?.fullName || "",
@@ -102,9 +102,8 @@ export const Checkout = () => {
     try {
       if (paymentMethod === "Razorpay") {
         try {
-          // 1. Open Razorpay first (passing total directly as we don't have order_id yet)
-          // We'll use a unique identifier or just the user ID for description
-          await handleRazorpayPayment(Date.now()); // Passing timestamp as temporary ID for description
+          // 1. Open Razorpay first
+          const rzpRes = await handleRazorpayPayment(Date.now());
           
           // 2. Payment success - Now create the order in DB
           const response = await api.post("/api/orders/create", {
@@ -113,6 +112,7 @@ export const Checkout = () => {
             name: user.fullName || user.firstName,
             total_price: total,
             payment_method: "Razorpay",
+            razorpay_payment_id: rzpRes.razorpay_payment_id,
             status: "confirmed", // Since payment succeeded
             address,
             items: items.map(i => ({
