@@ -1,5 +1,12 @@
 import { useEffect } from "react";
 import { useUser } from "@clerk/clerk-react";
+import { useWishlistStore } from "../store/wishlistStore";
+import { useProducts } from "../hooks/useProducts";
+import type { Product } from "../types/product";
+import { useNavigate } from "react-router-dom";
+import { useCartStore } from "../store/cartStore";
+import { ProductCard } from "../components/ProductCard";
+import { Navbar } from "../components/Navbar";
 
 export const Wishlist = () => {
   const { user, isLoaded } = useUser();
@@ -18,7 +25,7 @@ export const Wishlist = () => {
   const favoriteProducts = products.filter((p) => wishlistIds.includes(p.id));
 
   const handleAddToCart = (product: Product) => {
-    addToCart({ ...product, product_id: product.id, quantity: 1 }, user?.id);
+    addToCart({ ...product, id: product.id, product_id: product.id, quantity: 1 }, user?.id);
   };
 
   const handleToggleWishlist = (productId: number) => {
@@ -53,7 +60,7 @@ export const Wishlist = () => {
                 inCart={cartItems.some(i => i.product_id === product.id)}
                 inWishlist={true}
                 onAddToCart={handleAddToCart}
-                onToggleWishlist={toggle}
+                onToggleWishlist={handleToggleWishlist}
               />
             ))}
           </div>
