@@ -68,6 +68,7 @@ function UserSync() {
 function AppRoutes() {
   return (
     <div className="app-shell">
+      <div className="night-light-filter" />
       <UserSync />
       <div className="shell-glow" />
       <Routes>
