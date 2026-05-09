@@ -216,8 +216,8 @@ export default function ProductDetail() {
 
             <div style={{ padding: 28, background: "#fff", borderRadius: 28, boxShadow: "0 10px 40px rgba(0,0,0,0.04)", border: "1px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 24 }}>
-                <span style={{ fontSize: "2.2rem", fontWeight: 800, color: "#1e293b", letterSpacing: "-0.03em" }}>₹{(product.price || 0).toLocaleString()}</span>
-                <span style={{ fontSize: "1.1rem", color: "#cbd5e1", textDecoration: "line-through", fontWeight: 600 }}>₹{((product.price || 0) * 1.2).toLocaleString()}</span>
+                <span style={{ fontSize: "2.2rem", fontWeight: 800, color: "#1e293b", letterSpacing: "-0.03em" }}>₹{((product.price || 0) * quantity).toLocaleString()}</span>
+                <span style={{ fontSize: "1.1rem", color: "#cbd5e1", textDecoration: "line-through", fontWeight: 600 }}>₹{(((product.price || 0) * 1.2) * quantity).toLocaleString()}</span>
               </div>
 
               <div className="stack" style={{ gap: 18 }}>
@@ -231,8 +231,8 @@ export default function ProductDetail() {
                       <span style={{ lineHeight: 0, marginTop: -2 }}>+</span>
                     </button>
                   </div>
-                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: (product.stock || 0) < 5 ? "#ef4444" : "#10b981" }}>
-                    {(product.stock || 0)} Units Available
+                  <div style={{ fontSize: "0.85rem", fontWeight: 700, color: (product.stock - quantity) < 5 ? "#ef4444" : "#10b981" }}>
+                    {(product.stock - quantity)} Units Available
                   </div>
                 </div>
 
@@ -241,9 +241,14 @@ export default function ProductDetail() {
                     onClick={handleAddToCart}
                     disabled={(product.stock || 0) <= 0}
                     className="btn btn-primary"
-                    style={{ flex: 1, padding: "18px", borderRadius: 20, fontSize: "1.1rem", fontWeight: 800, border: "none", boxShadow: "0 10px 25px rgba(99, 102, 241, 0.25)" }}
+                    style={{ 
+                      flex: 1, padding: "18px", borderRadius: 20, fontSize: "1.1rem", fontWeight: 800, border: "none", 
+                      boxShadow: (product.stock || 0) <= 0 ? "none" : "0 10px 25px rgba(99, 102, 241, 0.25)",
+                      background: (product.stock || 0) <= 0 ? "#515151ff" : "linear-gradient(135deg, #2b2ff6ff 0%, #f2ac34ff 100%)",
+                      cursor: (product.stock || 0) <= 0 ? "not-allowed" : "pointer"
+                    }}
                   >
-                    {added ? "Success!" : (inCart ? "Update Bag" : "Add to Bag")}
+                    {(product.stock || 0) <= 0 ? "Sold Out" : (added ? "Success!" : (inCart ? "Update Bag" : "Add to Bag"))}
                   </button>
                   <button
                     onClick={() => { if (!isSignedIn) { navigate("/login"); return; } toggleWishlist(product.id, user?.id); }}
