@@ -8,59 +8,42 @@ router = APIRouter(prefix="/api/reviews", tags=["reviews"])
 def create_review(user_id: str, review: Review):
     try:
         client = get_supabase_admin()
-        print(f"DEBUG: Processing review for user {user_id}, product {review.product_id}")
         
-        # 1. Ensure user exists in DB (Handshake)
+        # 1. Ensure user exists
         user_check = client.table("users").select("id").eq("id", user_id).maybe_single().execute()
         if not user_check.data:
-            print(f"DEBUG: Creating missing user profile for {user_id}")
-            client.table("users").insert({"id": user_id, "name": "Authentic User"}).execute()
+            client.table("users").insert({"id": user_id, "name": "Verified User"}).execute()
 
-        order_id = review.order_id
-        
-        # 2. Ghost Order Logic
-        if not order_id or order_id == 0:
-            print("DEBUG: No order_id, attempting ghost order fallback")
-            existing_orders = client.table("orders").select("id").eq("user_id", user_id).limit(1).execute()
-            if existing_orders.data:
-                order_id = existing_orders.data[0]["id"]
-            else:
-                print("DEBUG: Creating verification order")
-                dummy_order = {
-                    "user_id": user_id,
-                    "total_price": 0,
-                    "payment_method": "Verification",
-                    "status": "completed"
-                }
-                new_order = client.table("orders").insert(dummy_order).execute()
-                if new_order.data:
-                    order_id = new_order.data[0]["id"]
-                else:
-                    return {"error": "Could not create verification order"}
+        # 2. Logic: Link to Order if Purchase exists
+        # Check order_items for this user/product
+        order_id = None
+        purchase_check = client.table("orders").select("id").eq("user_id", user_id).execute()
+        if purchase_check.data:
+            order_ids = [o["id"] for o in purchase_check.data]
+            item_check = client.table("order_items").select("order_id").in_("order_id", order_ids).eq("product_id", review.product_id).limit(1).execute()
+            if item_check.data:
+                order_id = item_check.data[0]["order_id"]
 
-        # 3. Check/Update/Insert Review
-        existing = client.table("reviews").select("*").eq("order_id", order_id).eq("user_id", user_id).execute()
-        
+        # Always Create New Independent Review
         data = {
-            "order_id": order_id,
             "product_id": review.product_id,
             "user_id": user_id,
             "rating": review.rating,
             "text": review.text,
+            "order_id": order_id
         }
 
-        if existing.data:
-            print(f"DEBUG: Updating existing review {existing.data[0]['id']}")
-            client.table("reviews").update(data).eq("id", existing.data[0]["id"]).execute()
-            return {"status": "updated"}
-        
-        print("DEBUG: Inserting new review")
+        print(f"DEBUG: Inserting independent review for user {user_id}")
+        client.table("reviews").insert(data).execute()
+        return {"status": "created"}
+
+        print(f"DEBUG: Inserting unique review for user {user_id}")
         client.table("reviews").insert(data).execute()
         return {"status": "created"}
 
     except Exception as e:
         print(f"CRITICAL ERROR in create_review: {str(e)}")
-        return {"error": str(e), "details": "Check backend terminal for traceback"}
+        return {"error": str(e)}
 
 @router.get("/product/{product_id}")
 def get_product_reviews(product_id: int):
@@ -75,3 +58,25 @@ def get_order_reviews(order_id: int):
     client = get_supabase_admin()
     data = client.table("reviews").select("*").eq("order_id", order_id).execute()
     return data.data or []
+
+@router.delete("/{review_id}")
+def delete_review(review_id: int):
+    try:
+        client = get_supabase_admin()
+        client.table("reviews").delete().eq("id", review_id).execute()
+        return {"status": "deleted"}
+    except Exception as e:
+        return {"error": str(e)}
+
+@router.put("/{review_id}")
+def update_review(review_id: int, review: Review):
+    try:
+        client = get_supabase_admin()
+        data = {
+            "rating": review.rating,
+            "text": review.text
+        }
+        client.table("reviews").update(data).eq("id", review_id).execute()
+        return {"status": "updated"}
+    except Exception as e:
+        return {"error": str(e)}
