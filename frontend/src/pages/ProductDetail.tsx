@@ -140,9 +140,9 @@ export default function ProductDetail() {
           {/* Product Details - Efficient Layout */}
           <div className="stack" style={{ gap: 20 }}>
             <div className="stack" style={{ gap: 6 }}>
-              <div style={{ display: "flex", gap: 8 }}>
-                <span style={{ padding: "4px 10px", borderRadius: 8, background: "#f1f5f9", color: "#64748b", fontWeight: 700, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>{product.category}</span>
-                {product.is_sale && <span style={{ padding: "4px 10px", borderRadius: 8, background: "#fef2f2", color: "#ef4444", fontWeight: 700, fontSize: "0.65rem", display: "flex", alignItems: "center", gap: 4 }}><Tag size={10} /> FLASH SALE</span>}
+              <div style={{ display: "flex", gap: 5 }}>
+                <span style={{ height: 24, padding: "0 10px", borderRadius: 8, background: "#f1f5f9", color: "#64748b", fontWeight: 700, fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{product.category}</span>
+                {product.is_sale && <span style={{ height: 24, padding: "0 10px", borderRadius: 8, background: "#fef2f2", color: "#ef4444", fontWeight: 700, fontSize: "0.65rem", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4 }}><Tag size={10} /> FLASH SALE</span>}
               </div>
               <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "#1e293b", lineHeight: 1.1, letterSpacing: "-0.02em" }}>{product.title}</h1>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -208,7 +208,24 @@ export default function ProductDetail() {
         {/* Reviews Section - Ultra-Compact Style */}
         <section style={{ marginTop: 48, paddingTop: 32, borderTop: "1px solid #f1f5f9", paddingBottom: 48, maxWidth: 800 }}>
           <div style={{ marginBottom: 32 }}>
-             <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1e293b", marginBottom: 20 }}>{reviews.length} Community Reviews</h2>
+             {/* Rating Analytics Header */}
+             <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+               <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "#1e293b", margin: 0 }}>{reviews.length} Community Reviews</h2>
+               {reviews.length > 0 && (
+                 <>
+                   <div style={{ width: 1, height: 16, background: "#e2e8f0" }} />
+                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <Star size={16} fill="#f59e0b" color="#f59e0b" />
+                        <span style={{ fontWeight: 900, color: "#1e293b", fontSize: "1.1rem" }}>
+                          {(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)}
+                        </span>
+                      </div>
+                      <span style={{ color: "#94a3b8", fontSize: "0.85rem", fontWeight: 700 }}>/ 5.0 AVG</span>
+                   </div>
+                 </>
+               )}
+             </div>
              
              {/* Write Review Area */}
              {!reviewSubmitted ? (
