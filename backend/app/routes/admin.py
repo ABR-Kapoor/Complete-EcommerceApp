@@ -68,10 +68,11 @@ def update_order_status(order_id: int, status: str):
 def get_all_users():
     try:
         client = get_supabase_admin()
-        data = client.table("users").select("*").order("created_at", desc=True).execute()
+        # Fetch users with their primary addresses
+        data = client.table("users").select("*, addresses(*)").order("created_at", desc=True).execute()
         return data.data or []
     except Exception as e:
-        print(f"Users Error: {e}")
+        print(f"Users Fetch Error: {e}")
         return []
 
 @router.get("/api/admin/stats")

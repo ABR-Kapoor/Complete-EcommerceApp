@@ -33,12 +33,12 @@ export const Wishlist = () => {
   };
 
   return (
-    <div className="app-shell" style={{ background: "#f8fafc", minHeight: "100vh" }}>
+    <div className="app-shell" style={{ minHeight: "100vh" }}>
       <div className="shell-glow" />
       <Navbar />
 
 
-      <main className="page-section">
+      <main className="page-section" style={{ paddingTop: 20 }}>
         <div style={{ marginBottom: 40 }}>
           <h1 className="section-title" style={{ fontSize: "2.5rem", fontWeight: 800 }}>Wishlist</h1>
           <p className="muted" style={{ fontWeight: 600 }}>{favoriteProducts.length} items saved in your collection</p>

@@ -53,6 +53,7 @@ function UserSync() {
             id: user.id,
             email: user.primaryEmailAddress?.emailAddress,
             name: user.fullName || user.username || user.primaryEmailAddress?.emailAddress?.split("@")[0],
+            phone: user.primaryPhoneNumber?.phoneNumber,
             avatar_url: user.imageUrl,
           });
           await fetchProfile(user.id);

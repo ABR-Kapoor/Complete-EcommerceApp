@@ -20,7 +20,7 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
         payload = {
             "name": data.get("name"),
             "email": email,
-            "phone": data.get("phone"),
+            "phone": data.get("phone"), # Capture phone from Clerk sync if available
             "avatar_url": data.get("avatar_url")
         }
         
@@ -63,14 +63,37 @@ def get_user_address(user_id: str):
     except Exception:
         return {}
 
+@router.post("/{user_id}/address")
+def save_user_address(user_id: str, address: Dict[str, Any] = Body(...)):
+    """Save or update user shipping address"""
+    client = get_supabase_admin()
+    try:
+        # Cleanup irrelevant data before saving
+        payload = {
+            "user_id": user_id,
+            "street": address.get("street"),
+            "city": address.get("city"),
+            "state": address.get("state"),
+            "zip_code": address.get("zip_code")
+        }
+        client.table("addresses").upsert(payload, on_conflict="user_id").execute()
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Address Save Error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.put("/{user_id}")
 def update_user(user_id: str, updates: Dict[str, Any] = Body(...)):
-    """Update user profile"""
+    """Update user profile with real-time persistence"""
     client = get_supabase_admin()
-    allowed = {k: v for k, v in updates.items() if k in ("name", "phone", "avatar_url", "email")}
-    if allowed:
-        client.table("users").update(allowed).eq("id", user_id).execute()
-    return {"status": "ok"}
+    try:
+        allowed = {k: v for k, v in updates.items() if k in ("name", "phone", "avatar_url", "email")}
+        if allowed:
+            client.table("users").update(allowed).eq("id", user_id).execute()
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"User Update Error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.put("/{user_id}/avatar")
 def upload_avatar(user_id: str, body: Dict[str, Any] = Body(...)):

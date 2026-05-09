@@ -41,11 +41,11 @@ export const Cart = () => {
   }
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif", background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)", minHeight: "100vh" }}>
+    <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh" }}>
       <Navbar />
 
 
-      <section className="page-section" style={{ maxWidth: 1200, margin: "20px auto 60px" }}>
+      <section className="page-section" style={{ maxWidth: 1200, margin: "20px auto 40px" }}>
         <div style={{ marginBottom: 32 }}>
           <p className="panel-copy" style={{ color: "#6366f1", fontWeight: 800 }}>MY SELECTIONS</p>
           <h1 className="section-title" style={{ fontSize: "2.5rem", fontWeight: 900 }}>Shopping Bag ({cartCount})</h1>

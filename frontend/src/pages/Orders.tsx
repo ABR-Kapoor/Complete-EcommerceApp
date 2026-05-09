@@ -190,7 +190,7 @@ export const Orders = () => {
   };
 
   if (loading) return (
-    <div style={{ background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ minHeight: "100vh" }}>
       <Navbar />
       <div className="empty-state page-section" style={{ minHeight: "60vh", display: "grid", placeItems: "center" }}>
         <div className="stack" style={{ alignItems: "center", gap: 20 }}>
@@ -204,19 +204,11 @@ export const Orders = () => {
   return (
     <div style={{ 
       fontFamily: "Inter, sans-serif", 
-      background: "fixed",
-      backgroundColor: "#f8fafc",
-      backgroundImage: `
-        radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0, transparent 50%), 
-        radial-gradient(at 100% 0%, rgba(6, 182, 212, 0.08) 0, transparent 50%),
-        radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.05) 0, transparent 50%),
-        radial-gradient(at 0% 100%, rgba(6, 182, 212, 0.05) 0, transparent 50%)
-      `,
       minHeight: "100vh" 
     }}>
       <Navbar />
 
-      <section className="page-section" style={{ maxWidth: 900, margin: "40px auto 100px" }}>
+      <section className="page-section" style={{ maxWidth: 900, margin: "24px auto 80px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, padding: "0 4px" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>

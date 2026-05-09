@@ -13,12 +13,12 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
   const { user } = useUser();
   const { signOut } = useClerk();
   const navigate = useNavigate();
-  const { profile, setProfile, fetchProfile } = useUserStore();
+  const { profile, updateProfile, updateAddress, fetchProfile } = useUserStore();
 
   const [name, setName] = useState(profile?.name || user?.fullName || user?.firstName || "");
   const [phone, setPhone] = useState(profile?.phone || "");
   const [paymentMethod, setPaymentMethod] = useState<string>(user?.unsafeMetadata?.paymentMethod as string || "COD");
-  const [address, setAddress] = useState({ street: "", city: "", state: "", zip_code: "", phone: "" });
+  const [address, setAddress] = useState({ street: "", city: "", state: "", zip_code: "" });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -49,17 +49,9 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
     if (!user) return;
     setSaving(true);
     try {
-      // 1. Sync to our local database (Primary Source of Truth)
       const updates = { name, phone, email: user.primaryEmailAddress?.emailAddress || "" };
-      await api.put(`/api/users/${user.id}`, updates);
+      await updateProfile(user.id, updates);
       
-      // Update local store immediately
-      if (profile) {
-        setProfile({ ...profile, ...updates });
-      } else {
-        await fetchProfile(user.id);
-      }
-
       // 2. Update Clerk user (Fallback/Sync)
       await user.update({
         firstName: name.split(" ")[0] || "",
@@ -68,7 +60,6 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
       });
       
       await user.reload();
-
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -81,11 +72,11 @@ export default function ProfileModal({ onClose }: ProfileModalProps) {
     if (!user) return;
     setSaving(true);
     try {
-      await api.post("/api/orders/save-address", { user_id: user.id, ...address });
+      await updateAddress(user.id, address);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
-      console.error(e);
+      console.error("Save address error:", e);
     }
     setSaving(false);
   };

@@ -179,10 +179,10 @@ export const Admin = () => {
   if (!isLoaded) return null;
 
   return (
-    <div style={{ fontFamily: "Inter, sans-serif", background: "#f8fafc", minHeight: "100vh" }}>
+    <div style={{ fontFamily: "Inter, sans-serif", minHeight: "100vh" }}>
       <Navbar adminMode activeTab={tab} onTabChange={setTab} />
 
-      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px" }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px", paddingTop: 40 }}>
         {/* Dashboard Tab */}
         {tab === "dashboard" && (
           <section className="page-section">
@@ -545,19 +545,33 @@ export const Admin = () => {
                        </div>
                     </div>
 
-                    <div className="stack" style={{ gap: 20, padding: 28, background: "#f8fafc", borderRadius: 32, border: "1px solid #f1f5f9" }}>
+                    <div className="stack" style={{ gap: 20, padding: 28, background: "#f8fafc", borderRadius: 32, border: "1px solid #f1f5f9", height: "100%" }}>
                        <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#1e293b", display: "flex", alignItems: "center", gap: 10 }}>
                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#06b6d4" }}></div>
                          Delivery Info
                        </h3>
-                       {orderDetail.order.address ? (
-                        <div style={{ fontSize: "0.95rem", lineHeight: 1.5, fontWeight: 600, color: "#334155" }}>
-                          {orderDetail.order.address.street}, {orderDetail.order.address.city}<br/>
-                          {orderDetail.order.address.state} - {orderDetail.order.address.zip_code}
-                          <div style={{ marginTop: 8, fontSize: "0.8rem", color: "#6366f1", fontWeight: 800 }}>📞 {orderDetail.order.address.phone}</div>
+                       {orderDetail.address ? (
+                        <div style={{ display: "flex", flexDirection: "column", height: "100%", justifyContent: "space-between" }}>
+                          <div style={{ 
+                            fontSize: "0.85rem", 
+                            fontWeight: 600, 
+                            color: "#475569",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            lineHeight: "1.5",
+                            textTransform: "capitalize" // Professional simple case
+                          }}>
+                            {orderDetail.address.street}, {orderDetail.address.city}, {orderDetail.address.state} - {orderDetail.address.zip_code}
+                          </div>
+                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed #e2e8f0", display: "flex", alignItems: "center", gap: 8, fontSize: "0.8rem", color: "#6366f1", fontWeight: 800 }}>
+                             <span style={{ opacity: 0.6 }}>Customer Mobile:</span>
+                             <span>{orderDetail.order.users?.phone || "—"}</span>
+                          </div>
                         </div>
                       ) : (
-                        <div style={{ fontSize: "0.9rem", color: "#94a3b8", fontStyle: "italic" }}>No address provided</div>
+                        <div style={{ fontSize: "0.9rem", color: "#94a3b8", fontStyle: "italic" }}>No logistics data saved</div>
                       )}
                     </div>
                     
@@ -663,7 +677,7 @@ export const Admin = () => {
             <div className="admin-card" style={{ borderRadius: 32, padding: 32, background: "#fff", border: "none" }}>
               <div className="table-shell" style={{ border: "none" }}>
                 <table className="table">
-                  <thead><tr style={{ background: "#f8fafc" }}><th style={{ borderRadius: "12px 0 0 12px" }}>User Identity</th><th>Contact Email</th><th>Phone Number</th><th>Access Role</th><th style={{ borderRadius: "0 12px 12px 0" }}>Joined Since</th></tr></thead>
+                  <thead><tr style={{ background: "#f8fafc" }}><th style={{ borderRadius: "12px 0 0 12px" }}>User Identity</th><th>Contact Email</th><th>Phone Number</th><th>Shipping Logistics</th><th>Access Role</th><th style={{ borderRadius: "0 12px 12px 0" }}>Joined Since</th></tr></thead>
                   <tbody>
                     {users.map(u => (
                       <tr key={u.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
@@ -677,6 +691,14 @@ export const Admin = () => {
                         </td>
                         <td className="muted" style={{ fontWeight: 600 }}>{u.email}</td>
                         <td className="muted" style={{ fontWeight: 600 }}>{u.phone || "—"}</td>
+                        <td className="muted" style={{ fontSize: "0.85rem", fontWeight: 600 }}>
+                          {u.addresses ? (
+                            <div>
+                              {u.addresses.street}, {u.addresses.city}<br/>
+                              {u.addresses.state}
+                            </div>
+                          ) : "No Address Saved"}
+                        </td>
                         <td>
                           <span style={{ 
                             padding: "6px 12px", borderRadius: 10, fontSize: "0.75rem", fontWeight: 800,
