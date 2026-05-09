@@ -6,17 +6,23 @@ import { useUser } from "@clerk/clerk-react";
 import { useState, useEffect } from "react";
 import api from "../lib/api";
 import { Navbar } from "../components/Navbar";
-import { Tag, Heart, MessageSquare, Star, Loader2, Check, BadgeCheck, Trash2, Clock } from "lucide-react";
+import { 
+  ArrowLeft, Star, ShoppingCart, Heart, Share2, 
+  ChevronRight, ChevronLeft, ShieldCheck, 
+  Truck, RotateCcw, Plus, Minus, User, Edit, Tag
+} from 'lucide-react';
 
 interface Review {
   id: number;
+  product_id: number;
+  user_id: string;
   rating: number;
   text: string;
   created_at: string;
   users?: {
     name: string;
     avatar_url: string;
-  }
+  };
 }
 
 export default function ProductDetail() {
