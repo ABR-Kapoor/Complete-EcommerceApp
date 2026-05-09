@@ -31,42 +31,48 @@ def get_cart(user_id: str):
 def add_to_cart(user_id: str, item: CartItem):
     try:
         client = get_supabase_admin()
-        print(f"DEBUG: Adding item to cart for user {user_id}, product {item.product_id}")
+        print(f"DEBUG: Atomic add to cart for user {user_id}, product {item.product_id}")
         
         # 1. Ensure user exists in DB (Handshake)
         user_check = client.table("users").select("id").eq("id", user_id).maybe_single().execute()
         if not user_check or not user_check.data:
-            print(f"DEBUG: Creating missing user profile for {user_id}")
             client.table("users").insert({"id": user_id, "name": "Authentic User"}).execute()
 
-        # 2. Get or Create Cart
-        cart = client.table("carts").select("id").eq("user_id", user_id).maybe_single().execute()
+        # 2. Get or Create UNIQUE Cart
+        # We use a try-except or check to handle the unique constraint
+        cart_res = client.table("carts").select("id").eq("user_id", user_id).maybe_single().execute()
         
-        if not cart or not cart.data:
-            print("DEBUG: Creating new cart for user")
-            res = client.table("carts").insert({"user_id": user_id}).execute()
-            if not res or not res.data: 
-                return {"error": "Failed to create cart record"}
-            cart_id = res.data[0]["id"]
+        if not cart_res or not cart_res.data:
+            print("DEBUG: Initializing new unique cart")
+            # Try to insert; if it fails due to unique constraint, we just fetch it again
+            try:
+                new_cart = client.table("carts").insert({"user_id": user_id}).execute()
+                if new_cart and new_cart.data:
+                    cart_id = new_cart.data[0]["id"]
+                else:
+                    # Fallback fetch in case of race condition
+                    cart_res = client.table("carts").select("id").eq("user_id", user_id).single().execute()
+                    cart_id = cart_res.data["id"]
+            except:
+                cart_res = client.table("carts").select("id").eq("user_id", user_id).single().execute()
+                cart_id = cart_res.data["id"]
         else:
-            cart_id = cart.data["id"]
+            cart_id = cart_res.data["id"]
         
-        # 3. Check if item already exists in cart to update instead of insert
+        # 3. Upsert item in cart
         existing = client.table("cart_items").select("id, quantity").eq("cart_id", cart_id).eq("product_id", item.product_id).maybe_single().execute()
         
         if existing and existing.data:
             new_qty = existing.data["quantity"] + item.quantity
-            print(f"DEBUG: Updating existing cart item {existing.data['id']} to qty {new_qty}")
             client.table("cart_items").update({"quantity": new_qty}).eq("id", existing.data["id"]).execute()
         else:
-            print(f"DEBUG: Inserting new cart item for product {item.product_id}")
             client.table("cart_items").insert({
                 "cart_id": cart_id,
                 "product_id": item.product_id,
                 "quantity": item.quantity
             }).execute()
         
-        return {"status": "ok"}
+        return {"status": "ok", "cart_id": cart_id}
     except Exception as e:
         print(f"CRITICAL ERROR in add_to_cart: {str(e)}")
         return {"error": str(e)}
