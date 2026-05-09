@@ -1,22 +1,28 @@
-import { useWishlistStore } from "../store/wishlistStore";
-import { useProducts } from "../hooks/useProducts";
-import type { Product } from "../types/product";
-import { useNavigate } from "react-router-dom";
-import { useCartStore } from "../store/cartStore";
-import { ProductCard } from "../components/ProductCard";
-import { Navbar } from "../components/Navbar";
+import { useEffect } from "react";
+import { useUser } from "@clerk/clerk-react";
 
 export const Wishlist = () => {
-  const { items: wishlistIds, toggle } = useWishlistStore();
+  const { user, isLoaded } = useUser();
+  const { items: wishlistIds, toggle, fetchWishlist } = useWishlistStore();
   const { products } = useProducts();
   const navigate = useNavigate();
   const addToCart = useCartStore((state) => state.addItem);
   const cartItems = useCartStore((state) => state.items);
 
+  useEffect(() => {
+    if (isLoaded && user?.id) {
+      fetchWishlist(user.id);
+    }
+  }, [isLoaded, user?.id, fetchWishlist]);
+
   const favoriteProducts = products.filter((p) => wishlistIds.includes(p.id));
 
   const handleAddToCart = (product: Product) => {
-    addToCart({ ...product, product_id: product.id, quantity: 1 });
+    addToCart({ ...product, product_id: product.id, quantity: 1 }, user?.id);
+  };
+
+  const handleToggleWishlist = (productId: number) => {
+    toggle(productId, user?.id);
   };
 
   return (
