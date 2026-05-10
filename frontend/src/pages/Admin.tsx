@@ -64,6 +64,7 @@ export const Admin = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [orderDetail, setOrderDetail] = useState<any>(null);
+  const [syncingAll, setSyncingAll] = useState(false);
   const imageRef = useRef<HTMLInputElement>(null);
 
   const isAdmin = profile?.role === "admin";
@@ -171,6 +172,21 @@ export const Admin = () => {
       console.error("Failed to fetch product for editing", err);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleBulkSync = async () => {
+    if (!confirm("Import all users from Clerk? This may take a few seconds.")) return;
+    setSyncingAll(true);
+    try {
+      const res = await api.post("/api/admin/sync-clerk-users");
+      alert(`Successfully synced ${res.data.synced} users!`);
+      fetchAll(); 
+    } catch (e) {
+      console.error("Bulk sync failed", e);
+      alert("Failed to sync users. Check console for details.");
+    } finally {
+      setSyncingAll(false);
     }
   };
 
@@ -670,9 +686,23 @@ export const Admin = () => {
         {/* Users Tab */}
         {tab === "users" && (
           <section className="page-section">
-            <div style={{ marginBottom: 32 }}>
-              <p className="panel-copy" style={{ color: "#10b981", fontWeight: 800 }}>CUSTOMER RELATIONSHIP</p>
-              <h1 className="section-title" style={{ fontSize: "2.5rem", fontWeight: 900 }}>User Management ({users.length})</h1>
+            <div className="row-between" style={{ marginBottom: 32 }}>
+              <div>
+                <p className="panel-copy" style={{ color: "#10b981", fontWeight: 800 }}>CUSTOMER RELATIONSHIP</p>
+                <h1 className="section-title" style={{ fontSize: "2.5rem", fontWeight: 900 }}>User Management ({users.length})</h1>
+              </div>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleBulkSync} 
+                disabled={syncingAll}
+                style={{ 
+                  padding: "14px 24px", borderRadius: 16, background: "#10b981", border: "none", 
+                  display: "flex", alignItems: "center", gap: 10 
+                }}
+              >
+                {syncingAll ? <Loader2 className="spin" size={20} /> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>}
+                {syncingAll ? "Syncing..." : "Sync All from Clerk"}
+              </button>
             </div>
             <div className="admin-card" style={{ borderRadius: 32, padding: 32, background: "#fff", border: "none" }}>
               <div className="table-shell" style={{ border: "none" }}>

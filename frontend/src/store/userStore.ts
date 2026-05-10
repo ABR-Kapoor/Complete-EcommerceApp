@@ -18,6 +18,7 @@ interface UserStore {
   fetchProfile: (userId: string) => Promise<void>;
   updateProfile: (userId: string, updates: Partial<UserProfile>) => Promise<void>;
   updateAddress: (userId: string, address: any) => Promise<void>;
+  syncProfile: (data: any) => Promise<void>;
 }
 
 export const useUserStore = create<UserStore>()(
@@ -51,6 +52,16 @@ export const useUserStore = create<UserStore>()(
           await api.post(`/api/users/${userId}/address`, address);
         } catch (e) {
           console.error("Failed to update address", e);
+        }
+      },
+      syncProfile: async (data) => {
+        try {
+          const res = await api.post("/api/users/sync", data);
+          if (res.data) {
+            set({ profile: res.data });
+          }
+        } catch (e) {
+          console.error("Sync failed", e);
         }
       }
     }),

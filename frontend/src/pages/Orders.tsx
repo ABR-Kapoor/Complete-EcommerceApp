@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
+import { useUserStore } from "../store/userStore";
 import api from "../lib/api";
 import { Navbar } from "../components/Navbar";
 import { 
@@ -148,6 +149,19 @@ const StatusTimeline = ({ status }: { status: string }) => {
 export const Orders = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const navigate = useNavigate();
+  const syncProfile = useUserStore((state) => state.syncProfile);
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user) {
+      syncProfile({
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        name: user.fullName || user.firstName || user.username || "Verified User",
+        avatar_url: user.imageUrl,
+        phone: user.primaryPhoneNumber?.phoneNumber
+      });
+    }
+  }, [isLoaded, isSignedIn, user, syncProfile]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -155,7 +169,9 @@ export const Orders = () => {
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     try {
+      console.log("DEBUG: Fetching orders for user:", user.id);
       const res = await api.get(`/api/orders/user/${user.id}`);
+      console.log("DEBUG: Orders received:", res.data);
       setOrders(res.data || []);
       setLastRefresh(new Date());
     } catch (e) {

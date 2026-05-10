@@ -146,6 +146,7 @@ export const Checkout = () => {
         }
       } else {
         // COD - Create order immediately
+        console.log("DEBUG: Placing COD order for user:", user.id);
         const response = await api.post("/api/orders/create", {
           user_id: user.id,
           email: user.primaryEmailAddress?.emailAddress,
@@ -160,6 +161,7 @@ export const Checkout = () => {
             price: i.price
           }))
         });
+        console.log("DEBUG: Order placed successfully:", response.data);
         
         clearCart();
         navigate(`/order-success/${response.data.order_id}`);

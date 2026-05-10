@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import { ClerkProvider, useUser } from "@clerk/clerk-react";
 import { Home } from "./pages/Home";
 import ProductDetail from "./pages/ProductDetail";
@@ -22,7 +23,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded: clerkLoaded, isSignedIn } = useUser();
-  const { profile, loading: profileLoading } = useUserStore();
+  const { profile, loading: profileLoading, fetchProfile } = useUserStore();
   
   if (!clerkLoaded || (isSignedIn && profileLoading && !profile)) {
     return (
@@ -36,45 +37,42 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return isSignedIn && isAdmin ? <>{children}</> : <Navigate to="/" />;
 }
 
-import { useEffect } from "react";
-import api from "./lib/api";
 
-function UserSync() {
-  const { user, isSignedIn } = useUser();
-  const { profile, fetchProfile } = useUserStore();
-  const { fetchCart } = useCartStore();
-  const { fetchWishlist } = useWishlistStore();
 
-  useEffect(() => {
-    const sync = async () => {
-      if (isSignedIn && user && (!profile || profile.id !== user.id)) {
-        try {
-          await api.post("/api/users/sync", {
-            id: user.id,
-            email: user.primaryEmailAddress?.emailAddress,
-            name: user.fullName || user.username || user.primaryEmailAddress?.emailAddress?.split("@")[0],
-            phone: user.primaryPhoneNumber?.phoneNumber,
-            avatar_url: user.imageUrl,
-          });
-          await fetchProfile(user.id);
-          await fetchCart(user.id);
-          await fetchWishlist(user.id);
-        } catch (err) {
-          console.error("User sync failed:", err);
-        }
-      }
-    };
-    sync();
-  }, [isSignedIn, user, fetchProfile, fetchCart, fetchWishlist, profile]);
 
-  return null;
-}
 
 function AppRoutes() {
+  const { user, isSignedIn, isLoaded } = useUser();
+  const syncProfile = useUserStore((state) => state.syncProfile);
+  const fetchCart = useCartStore((state) => state.fetchCart);
+  const fetchWishlist = useWishlistStore((state) => state.fetchWishlist);
+  const lastSyncedId = useRef<string | null>(null);
+
+  console.log("DEBUG AppRoutes:", { isLoaded, isSignedIn, userId: user?.id, lastSynced: lastSyncedId.current });
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user && lastSyncedId.current !== user.id) {
+      lastSyncedId.current = user.id;
+      console.log("SYNC: Triggering global sync for", user.id);
+      syncProfile({
+        id: user.id,
+        email: user.primaryEmailAddress?.emailAddress,
+        name: user.fullName || user.firstName || user.username || "Verified User",
+        avatar_url: user.imageUrl,
+        phone: user.primaryPhoneNumber?.phoneNumber
+      }).then(() => {
+        fetchCart(user.id);
+        fetchWishlist(user.id);
+      }).catch(err => {
+        console.error("SYNC: Failed", err);
+        lastSyncedId.current = null; // Allow retry on failure
+      });
+    }
+  }, [isLoaded, isSignedIn, user, syncProfile, fetchCart, fetchWishlist]);
+
   return (
     <div className="app-shell">
       <div className="night-light-filter" />
-      <UserSync />
       <div className="shell-glow" />
       <Routes>
         <Route path="/" element={<Home />} />

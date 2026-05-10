@@ -15,6 +15,7 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="User ID is required")
 
     try:
+        print(f"DEBUG: Syncing user ID: {user_id}")
         existing = client.table("users").select("*").eq("id", user_id).maybe_single().execute()
         email = data.get("email", "")
         payload = {
@@ -28,15 +29,18 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
             payload["phone"] = data.get("phone")
         
         if existing.data:
-            # Update existing user but DON'T overwrite the role
+            print(f"DEBUG: Updating existing user: {user_id}")
             client.table("users").update(payload).eq("id", user_id).execute()
         else:
-            # New user: set default role to 'user'
+            print(f"DEBUG: Creating new user: {user_id}")
             payload["id"] = user_id
             payload["role"] = "user"
             client.table("users").insert(payload).execute()
         
-        return {"status": "ok", "user_id": user_id}
+        # Fetch and return the final profile
+        final = client.table("users").select("*").eq("id", user_id).single().execute()
+        print(f"DEBUG: Sync complete for {user_id}")
+        return final.data
     except Exception as e:
         print(f"Profile Sync Error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
