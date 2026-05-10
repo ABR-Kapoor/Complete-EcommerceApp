@@ -120,8 +120,14 @@ export const Admin = () => {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Delete this product?")) return;
-    await api.delete(`/api/admin/products/${id}`);
-    setProducts(p => p.filter(x => x.id !== id));
+    try {
+      await api.delete(`/api/admin/products/${id}`);
+      setProducts(p => p.filter(x => x.id !== id));
+    } catch (err: any) {
+      console.error("Delete error:", err);
+      const msg = err.response?.data?.detail || "Failed to delete product. It might be linked to existing orders.";
+      alert(msg);
+    }
   };
 
   const handleStatusChange = async (orderId: number, status: string) => {

@@ -219,17 +219,6 @@ export const Orders = () => {
     return () => clearInterval(id);
   }, [user, fetchOrders]);
 
-  const [filter, setFilter] = useState("all");
-  const [sort, setSort] = useState("newest");
-
-  const filteredOrders = orders
-    .filter(o => filter === "all" || (o.status || "").toLowerCase() === filter.toLowerCase())
-    .sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return sort === "newest" ? dateB - dateA : dateA - dateB;
-    });
-
   const handleCancelOrder = async (orderId: number) => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
     try {

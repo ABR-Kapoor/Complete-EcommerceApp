@@ -134,8 +134,31 @@ def update_product(id: int, product: Product):
 @router.delete("/api/admin/products/{id}")
 def delete_product(id: int):
     client = get_supabase_admin()
-    client.table("products").delete().eq("id", id).execute()
-    return {"status": "ok"}
+    try:
+        # 1. Critical Check: Order History
+        orders = client.table("order_items").select("id").eq("product_id", id).execute()
+        if orders and hasattr(orders, "data") and len(orders.data) > 0:
+            raise Exception("Cannot delete product with existing order history. It must be kept for financial records.")
+
+        # 2. Cleanup non-critical dependencies
+        # Table names verified by route inspections
+        client.table("reviews").delete().eq("product_id", id).execute()
+        client.table("cart_items").delete().eq("product_id", id).execute()
+        client.table("wishlists").delete().eq("product_id", id).execute()
+        
+        # 3. Final Delete
+        client.table("products").delete().eq("id", id).execute()
+        return {"status": "ok"}
+    except Exception as e:
+        msg = str(e)
+        if "foreign key constraint" in msg.lower():
+            if "order_items" in msg.lower():
+                msg = "Cannot delete: Product is in order history."
+            elif "reviews" in msg.lower():
+                msg = "Please clear product reviews first."
+        
+        print(f"Admin Delete Error: {e}")
+        raise HTTPException(status_code=400, detail=msg)
 
 @router.post("/api/admin/sync-clerk-users")
 def sync_clerk_users():

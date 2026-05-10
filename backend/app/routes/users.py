@@ -34,6 +34,9 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
         final = client.table("users").select("*").eq("id", user_id).single().execute()
         return final.data
     except Exception as e:
+        import traceback
+        print(f"CRITICAL: User Sync Error: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{user_id}")
@@ -48,6 +51,9 @@ def get_user(user_id: str):
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        print(f"CRITICAL: User Profile Fetch Error: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{user_id}/address")
