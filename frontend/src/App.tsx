@@ -23,7 +23,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { isLoaded: clerkLoaded, isSignedIn } = useUser();
-  const { profile, loading: profileLoading, fetchProfile } = useUserStore();
+  const { profile, loading: profileLoading } = useUserStore();
   
   if (!clerkLoaded || (isSignedIn && profileLoading && !profile)) {
     return (

@@ -16,7 +16,7 @@ interface NavbarProps {
 
 export const Navbar = ({ adminMode, activeTab, onTabChange }: NavbarProps) => {
   const { user, isSignedIn } = useUser();
-  const { profile, loading: profileLoading, fetchProfile, syncProfile } = useUserStore();
+  const { profile, loading: profileLoading, fetchProfile } = useUserStore();
   const cartItems = useCartStore((state) => state.items);
   const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
