@@ -9,6 +9,7 @@ interface UserProfile {
   phone: string;
   role: string;
   avatar_url?: string;
+  address?: any;
 }
 
 interface UserStore {
@@ -19,6 +20,7 @@ interface UserStore {
   updateProfile: (userId: string, updates: Partial<UserProfile>) => Promise<void>;
   updateAddress: (userId: string, address: any) => Promise<void>;
   syncProfile: (data: any) => Promise<void>;
+  fetchAddress: (userId: string) => Promise<void>;
 }
 
 export const useUserStore = create<UserStore>()(
@@ -38,20 +40,37 @@ export const useUserStore = create<UserStore>()(
           set({ loading: false });
         }
       },
+      fetchAddress: async (userId) => {
+        try {
+          const res = await api.get(`/api/users/${userId}/address`);
+          const current = get().profile;
+          if (current) set({ profile: { ...current, address: res.data } });
+        } catch (e) {
+          console.error("Failed to fetch address", e);
+        }
+      },
       updateProfile: async (userId, updates) => {
+        const current = get().profile;
+        // Optimistic update
+        if (current) set({ profile: { ...current, ...updates } });
+        
         try {
           await api.put(`/api/users/${userId}`, updates);
-          const current = get().profile;
-          if (current) set({ profile: { ...current, ...updates } });
         } catch (e) {
-          console.error("Failed to update profile", e);
+          console.error("Update failed, rolling back", e);
+          if (current) set({ profile: current }); // Rollback
         }
       },
       updateAddress: async (userId, address) => {
+        const current = get().profile;
+        // Optimistic update
+        if (current) set({ profile: { ...current, address } });
+        
         try {
           await api.post(`/api/users/${userId}/address`, address);
         } catch (e) {
-          console.error("Failed to update address", e);
+          console.error("Address update failed, rolling back", e);
+          if (current) set({ profile: current }); // Rollback
         }
       },
       syncProfile: async (data) => {

@@ -13,6 +13,7 @@ import { Wishlist } from "./pages/Wishlist";
 import { useUserStore } from "./store/userStore";
 import { useCartStore } from "./store/cartStore";
 import { useWishlistStore } from "./store/wishlistStore";
+import { supabase } from "./lib/supabase";
 import { Loader2 } from "lucide-react";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -44,16 +45,45 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   const { user, isSignedIn, isLoaded } = useUser();
   const syncProfile = useUserStore((state) => state.syncProfile);
+  const fetchProfile = useUserStore((state) => state.fetchProfile);
+  const fetchAddress = useUserStore((state) => state.fetchAddress);
   const fetchCart = useCartStore((state) => state.fetchCart);
   const fetchWishlist = useWishlistStore((state) => state.fetchWishlist);
   const lastSyncedId = useRef<string | null>(null);
 
-  console.log("DEBUG AppRoutes:", { isLoaded, isSignedIn, userId: user?.id, lastSynced: lastSyncedId.current });
+  // Global Real-time Subscription for Profile & Address
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    const uid = user.id;
+    const channel = supabase
+      .channel(`global_user_sync_${uid}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'users',
+        filter: `id=eq.${uid}` 
+      }, () => {
+        fetchProfile(uid);
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'addresses',
+        filter: `user_id=eq.${uid}` 
+      }, () => {
+        fetchAddress(uid);
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchProfile, fetchAddress]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn && user && lastSyncedId.current !== user.id) {
       lastSyncedId.current = user.id;
-      console.log("SYNC: Triggering global sync for", user.id);
       syncProfile({
         id: user.id,
         email: user.primaryEmailAddress?.emailAddress,
@@ -63,12 +93,13 @@ function AppRoutes() {
       }).then(() => {
         fetchCart(user.id);
         fetchWishlist(user.id);
+        fetchAddress(user.id);
       }).catch(err => {
         console.error("SYNC: Failed", err);
-        lastSyncedId.current = null; // Allow retry on failure
+        lastSyncedId.current = null;
       });
     }
-  }, [isLoaded, isSignedIn, user, syncProfile, fetchCart, fetchWishlist]);
+  }, [isLoaded, isSignedIn, user, syncProfile, fetchCart, fetchWishlist, fetchAddress]);
 
   return (
     <div className="app-shell">

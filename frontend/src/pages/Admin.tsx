@@ -180,7 +180,8 @@ export const Admin = () => {
     setSyncingAll(true);
     try {
       const res = await api.post("/api/admin/sync-clerk-users");
-      alert(`Successfully synced ${res.data.synced} users!`);
+      const { total_in_clerk, synced, failed } = res.data;
+      alert(`Sync Complete!\n\nTotal in Clerk: ${total_in_clerk}\nSuccessfully Synced: ${synced}\nFailed: ${failed}`);
       fetchAll(); 
     } catch (e) {
       console.error("Bulk sync failed", e);

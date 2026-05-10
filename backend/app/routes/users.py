@@ -15,34 +15,25 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="User ID is required")
 
     try:
-        print(f"DEBUG: Syncing user ID: {user_id}")
-        existing = client.table("users").select("*").eq("id", user_id).maybe_single().execute()
-        email = data.get("email", "")
         payload = {
+            "id": user_id,
             "name": data.get("name"),
-            "email": email,
+            "email": data.get("email", ""),
             "avatar_url": data.get("avatar_url")
         }
-        
-        # Only include phone if it's not null/empty to avoid overwriting existing data
         if data.get("phone"):
             payload["phone"] = data.get("phone")
-        
-        if existing.data:
-            print(f"DEBUG: Updating existing user: {user_id}")
-            client.table("users").update(payload).eq("id", user_id).execute()
-        else:
-            print(f"DEBUG: Creating new user: {user_id}")
-            payload["id"] = user_id
+            
+        res_existing = client.table("users").select("role").eq("id", user_id).maybe_single().execute()
+        if not res_existing or not hasattr(res_existing, 'data') or not res_existing.data:
             payload["role"] = "user"
-            client.table("users").insert(payload).execute()
-        
-        # Fetch and return the final profile
+        else:
+            payload["role"] = res_existing.data.get("role", "user")
+            
+        client.table("users").upsert(payload, on_conflict="id").execute()
         final = client.table("users").select("*").eq("id", user_id).single().execute()
-        print(f"DEBUG: Sync complete for {user_id}")
         return final.data
     except Exception as e:
-        print(f"Profile Sync Error: {e}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{user_id}")
@@ -57,7 +48,6 @@ def get_user(user_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"GET USER ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{user_id}/address")
@@ -75,19 +65,26 @@ def save_user_address(user_id: str, address: Dict[str, Any] = Body(...)):
     """Save or update user shipping address"""
     client = get_supabase_admin()
     try:
-        # Cleanup irrelevant data before saving
+        # Preparation: Only include columns that EXIST in the addresses table
+        # We verified columns are: ['user_id', 'street', 'city', 'state', 'zip_code']
         payload = {
             "user_id": user_id,
             "street": address.get("street"),
             "city": address.get("city"),
             "state": address.get("state"),
-            "zip_code": address.get("zip_code")
+            "zip_code": str(address.get("zip_code") or "")
         }
-        # Only include phone if provided
-        if address.get("phone"):
-            payload["phone"] = address.get("phone")
+        
+        # Robust Save: Check if exists using user_id as PK
+        res_existing = client.table("addresses").select("user_id").eq("user_id", user_id).maybe_single().execute()
+        
+        if res_existing and hasattr(res_existing, 'data') and res_existing.data:
+            # Update existing record
+            client.table("addresses").update(payload).eq("user_id", user_id).execute()
+        else:
+            # Create new record
+            client.table("addresses").insert(payload).execute()
             
-        client.table("addresses").upsert(payload, on_conflict="user_id").execute()
         return {"status": "ok"}
     except Exception as e:
         print(f"Address Save Error: {e}")

@@ -22,18 +22,12 @@ class Product(BaseModel):
 def get_all_orders():
     try:
       client = get_supabase_admin()
-      # Join with users to get names/emails
       try:
         data = client.table("orders").select("*, users(name, email, phone)").order("created_at", desc=True).execute()
-        print(f"DEBUG: All orders fetched: {len(data.data or [])} records")
-        if data.data:
-          print(f"DEBUG: Sample Order User ID: {data.data[0].get('user_id')}")
-      except Exception as e:
-        print(f"DEBUG: Orders table join failed, trying simple select: {e}")
+      except Exception:
         data = client.table("orders").select("*").order("created_at", desc=True).execute()
       return data.data or []
-    except Exception as e:
-        print(f"Orders Error: {e}")
+    except Exception:
         return []
 
 @router.get("/api/admin/orders/{order_id}")
@@ -43,18 +37,10 @@ def get_order_detail(order_id: int):
         order_res = client.table("orders").select("*, users(name, email, phone)").eq("id", order_id).maybe_single().execute()
         if not order_res.data:
             raise HTTPException(status_code=404, detail="Order not found")
-        
         items = client.table("order_items").select("*, products(title, image_url)").eq("order_id", order_id).execute()
-        
-        # Get address
         uid = order_res.data.get("user_id")
         addr_res = client.table("addresses").select("*").eq("user_id", uid).maybe_single().execute()
-        
-        return {
-            "order": order_res.data,
-            "items": items.data or [],
-            "address": addr_res.data
-        }
+        return {"order": order_res.data, "items": items.data or [], "address": addr_res.data}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -73,55 +59,28 @@ def update_order_status(order_id: int, status: str):
 def get_all_users():
     try:
         client = get_supabase_admin()
-        # Fetch users with their primary addresses
         data = client.table("users").select("*, addresses(*)").order("created_at", desc=True).execute()
         return data.data or []
-    except Exception as e:
-        print(f"Users Fetch Error: {e}")
+    except Exception:
         return []
 
 @router.get("/api/admin/stats")
 def get_admin_stats():
-    """Calculates real-time business metrics for the dashboard"""
     try:
         client = get_supabase_admin()
-        
-        # 1. Total Revenue (Confirmed/Delivered orders)
         revenue_res = client.table("orders").select("total_price").neq("status", "cancelled").execute()
         total_revenue = sum(o.get("total_price", 0) for o in (revenue_res.data or []))
-        
-        # 2. Total Orders
         orders_res = client.table("orders").select("id", count="exact").execute()
         total_orders = orders_res.count if hasattr(orders_res, 'count') else len(orders_res.data or [])
-        
-        # 3. Pending Orders
         pending_res = client.table("orders").select("id").in_("status", ["pending_payment", "confirmed", "processing"]).execute()
         pending_orders = len(pending_res.data or [])
-        
-        # 4. Total Products
         prod_res = client.table("products").select("id").execute()
         total_products = len(prod_res.data or [])
-        
-        # 5. Total Customers (Unique Users)
         user_res = client.table("users").select("id").execute()
-        total_users = len(user_res.data or [])
-        
-        return {
-            "total_revenue": total_revenue,
-            "total_orders": total_orders,
-            "pending_orders": pending_orders,
-            "total_products": total_products,
-            "total_users": total_users
-        }
-    except Exception as e:
-        print(f"Stats Error: {e}")
-        return {
-            "total_revenue": 0,
-            "total_orders": 0,
-            "pending_orders": 0,
-            "total_products": 0,
-            "total_users": 0
-        }
+        total_users = len(user_res.data) if user_res.data else 0
+        return {"total_orders": total_orders, "total_revenue": total_revenue, "pending_orders": pending_orders, "total_products": total_products, "total_users": total_users}
+    except Exception:
+        return {"total_revenue": 0, "total_orders": 0, "pending_orders": 0, "total_products": 0, "total_users": 0}
 
 @router.post("/api/admin/upload/product-image/{product_id}")
 def upload_image(product_id: int, file: UploadFile = File(...)):
@@ -131,14 +90,13 @@ def upload_image(product_id: int, file: UploadFile = File(...)):
         path = f"products/{product_id}/{file.filename}"
         try:
             client.storage.from_("ecommerce").upload(path, content, {"content-type": file.content_type})
-        except:
+        except Exception:
             client.storage.from_("ecommerce").update(path, content, {"content-type": file.content_type})
         url_res = client.storage.from_("ecommerce").get_public_url(path)
         public_url = url_res.public_url if hasattr(url_res, 'public_url') else (url_res if isinstance(url_res, str) else url_res.get("publicUrl", ""))
         client.table("products").update({"image_url": public_url}).eq("id", product_id).execute()
         return {"url": public_url}
     except Exception as e:
-        print(f"Upload Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/api/admin/upload/temp")
@@ -181,43 +139,33 @@ def delete_product(id: int):
 
 @router.post("/api/admin/sync-clerk-users")
 def sync_clerk_users():
-    """Bulk import all users from Clerk to Supabase"""
     secret_key = os.getenv("CLERK_SECRET_KEY")
     if not secret_key:
-        raise HTTPException(status_code=500, detail="CLERK_SECRET_KEY not set in environment")
-    
+        raise HTTPException(status_code=500, detail="CLERK_SECRET_KEY not set")
     try:
         headers = {"Authorization": f"Bearer {secret_key}"}
-        # Clerk allows up to 500 users per request (pagination ignored for now for simplicity)
         res = requests.get("https://api.clerk.com/v1/users?limit=500", headers=headers)
-        res.raise_for_status()
+        if res.status_code != 200:
+            raise HTTPException(status_code=res.status_code, detail="Clerk API Error")
         clerk_users = res.json()
-        
         client = get_supabase_admin()
         synced = 0
-        
         for u in clerk_users:
             uid = u.get("id")
             email = u.get("email_addresses")[0].get("email_address") if u.get("email_addresses") else "unknown@email.com"
             name = f"{u.get('first_name') or ''} {u.get('last_name') or ''}".strip() or email.split("@")[0]
             avatar = u.get("image_url")
-            
-            payload = {
-                "id": uid,
-                "email": email,
-                "name": name,
-                "avatar_url": avatar
-            }
-            
-            # Check if user exists to avoid overwriting roles (like admin)
-            existing = client.table("users").select("role").eq("id", uid).maybe_single().execute()
-            if not existing.data:
-                payload["role"] = "user"
-            
-            client.table("users").upsert(payload, on_conflict="id").execute()
-            synced += 1
-            
-        return {"status": "ok", "synced": synced}
+            payload = {"id": uid, "email": email, "name": name, "avatar_url": avatar}
+            try:
+                res_existing = client.table("users").select("role").eq("id", uid).maybe_single().execute()
+                if not res_existing or not hasattr(res_existing, "data") or not res_existing.data:
+                    payload["role"] = "user"
+                else:
+                    payload["role"] = res_existing.data.get("role", "user")
+                client.table("users").upsert(payload, on_conflict="id").execute()
+                synced += 1
+            except Exception:
+                pass
+        return {"status": "ok", "total_in_clerk": len(clerk_users), "synced": synced, "failed": len(clerk_users) - synced}
     except Exception as e:
-        print(f"BULK SYNC ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/userStore";
-import api from "../lib/api";
+import { supabase } from "../lib/supabase";
+import { api } from "../lib/api";
 import { Navbar } from "../components/Navbar";
 import { 
   CreditCard, 
@@ -149,6 +150,7 @@ const StatusTimeline = ({ status }: { status: string }) => {
 export const Orders = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const navigate = useNavigate();
+  const { profile } = useUserStore();
   const syncProfile = useUserStore((state) => state.syncProfile);
 
   useEffect(() => {
@@ -167,19 +169,19 @@ export const Orders = () => {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const fetchOrders = useCallback(async () => {
-    if (!user) return;
+    const uid = user?.id;
+    if (!uid) return;
     try {
-      console.log("DEBUG: Fetching orders for user:", user.id);
-      const res = await api.get(`/api/orders/user/${user.id}`);
-      console.log("DEBUG: Orders received:", res.data);
+      const email = user.primaryEmailAddress?.emailAddress;
+      const res = await api.get(`/api/orders/user/${uid}${email ? `?email=${email}` : ""}`);
       setOrders(res.data || []);
       setLastRefresh(new Date());
     } catch (e) {
-      console.error("Orders fetch failed:", e);
+      console.error("Fetch failed", e);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Initial load
   useEffect(() => {
@@ -187,13 +189,46 @@ export const Orders = () => {
     if (isLoaded && user) {
         fetchOrders();
     }
-  }, [user, isLoaded, isSignedIn, navigate, fetchOrders]);
+  }, [user, isLoaded, isSignedIn, navigate, fetchOrders]); // Removed profile dependency
 
-  // Real-time auto-refresh every 15s
+  // Real-time updates via Supabase Subscriptions
   useEffect(() => {
-    const id = setInterval(() => { if (user) fetchOrders(); }, 15000);
+    const uid = user?.id;
+    if (!uid) return;
+    
+    const channel = supabase
+      .channel(`orders_user_${uid}`)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'orders',
+        filter: `user_id=eq.${uid}` 
+      }, () => {
+        fetchOrders();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchOrders]);
+
+  // Fallback polling (faster: 5s)
+  useEffect(() => {
+    const id = setInterval(() => { if (user) fetchOrders(); }, 5000);
     return () => clearInterval(id);
   }, [user, fetchOrders]);
+
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("newest");
+
+  const filteredOrders = orders
+    .filter(o => filter === "all" || (o.status || "").toLowerCase() === filter.toLowerCase())
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sort === "newest" ? dateB - dateA : dateA - dateB;
+    });
 
   const handleCancelOrder = async (orderId: number) => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
@@ -224,48 +259,59 @@ export const Orders = () => {
     }}>
       <Navbar />
 
-      <section className="page-section" style={{ maxWidth: 900, margin: "24px auto 80px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 40, padding: "0 4px" }}>
+      <section className="page-section" style={{ maxWidth: 1000, margin: "0 auto", padding: "40px 20px" }}>
+        <div className="row-between" style={{ marginBottom: 40, alignItems: "flex-end" }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#6366f1" }} />
-              <p className="panel-copy" style={{ color: "#6366f1", fontWeight: 800, margin: 0, textTransform: "uppercase", letterSpacing: "0.1em", fontSize: "0.75rem" }}>Purchase History</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, color: "#6366f1", marginBottom: 12 }}>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#6366f1" }} />
+              <span style={{ fontWeight: 800, fontSize: "0.8rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>Purchase History</span>
             </div>
-            <h1 className="section-title" style={{ fontSize: "2.75rem", fontWeight: 900, margin: 0, letterSpacing: "-0.02em" }}>My Orders</h1>
+            <h1 style={{ fontSize: "2.8rem", fontWeight: 900, color: "#111827", letterSpacing: "-0.02em" }}>My Orders</h1>
           </div>
           
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-            <button
-              onClick={fetchOrders}
-              className="btn-refresh"
-              style={{ 
-                background: "#fff", 
-                color: "#1e293b", 
-                border: "1px solid #f1f5f9", 
-                padding: "10px 20px", 
-                borderRadius: "14px", 
-                fontWeight: 700, 
-                cursor: "pointer", 
-                fontSize: "0.85rem",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
-                transition: "all 0.2s ease"
-              }}
-            >
-              <RefreshCw size={16} /> Refresh
-            </button>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Clock size={12} color="#94a3b8" />
-              <span style={{ fontSize: "0.7rem", color: "#94a3b8", fontWeight: 600 }}>
-                Synced {lastRefresh.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </span>
+          <div className="stack" style={{ gap: 12, alignItems: "flex-end" }}>
+            <div style={{ display: "flex", alignItems: "center", background: "#f1f5f9", padding: 4, borderRadius: 12 }}>
+               {["all", "pending", "confirmed", "shipped", "delivered"].map(s => (
+                 <button 
+                  key={s}
+                  onClick={() => setFilter(s)}
+                  style={{
+                    padding: "8px 16px", borderRadius: 10, border: "none", cursor: "pointer",
+                    fontSize: "0.82rem", fontWeight: 700, textTransform: "capitalize",
+                    background: filter === s ? "#fff" : "transparent",
+                    color: filter === s ? "#111827" : "#64748b",
+                    boxShadow: filter === s ? "0 2px 8px rgba(0,0,0,0.05)" : "none",
+                    transition: "all 0.2s ease"
+                  }}
+                 >{s}</button>
+               ))}
+            </div>
+            <div className="row-between" style={{ gap: 12 }}>
+              <select 
+                value={sort} 
+                onChange={(e) => setSort(e.target.value)}
+                style={{
+                  padding: "10px 16px", borderRadius: 12, border: "1px solid #e2e8f0",
+                  background: "#fff", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
+                  outline: "none"
+                }}
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+              </select>
+              <button 
+                onClick={fetchOrders}
+                className="btn btn-ghost"
+                style={{ padding: "10px 16px", display: "flex", alignItems: "center", gap: 8, borderRadius: 12 }}
+              >
+                <RefreshCw size={18} />
+                Refresh
+              </button>
             </div>
           </div>
         </div>
 
-        {orders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <div className="empty-state" style={{ 
             background: "#fff", 
             borderRadius: "32px", 
@@ -286,15 +332,41 @@ export const Orders = () => {
                 <Package size={48} strokeWidth={1.5} />
               </div>
               <div>
-                <p className="empty-title" style={{ fontSize: "1.75rem", fontWeight: 900, marginBottom: 8 }}>No orders yet</p>
-                <p className="empty-copy" style={{ color: "#64748b", maxWidth: 400 }}>Your history is clear. Ready to find something amazing to fill this space?</p>
+                <p className="empty-title" style={{ fontSize: "1.75rem", fontWeight: 900, marginBottom: 8 }}>{filter === "all" ? "No orders yet" : `No ${filter} orders`}</p>
+                <p className="empty-copy" style={{ color: "#64748b", maxWidth: 400 }}>{filter === "all" ? "Your history is clear. Ready to find something amazing to fill this space?" : `You don't have any orders with status "${filter}" yet.`}</p>
               </div>
-              <button onClick={() => navigate("/")} className="btn btn-primary" style={{ padding: "16px 40px", borderRadius: "18px", fontWeight: 800, fontSize: "1.1rem" }}>Start Shopping</button>
+              <div className="stack" style={{ gap: 12 }}>
+                <button onClick={() => navigate("/")} className="btn btn-primary" style={{ padding: "16px 40px", borderRadius: "18px", fontWeight: 800, fontSize: "1.1rem" }}>Start Shopping</button>
+                <button 
+                  onClick={async () => {
+                  if (!user) return;
+                  setLoading(true);
+                  try {
+                    const email = user.primaryEmailAddress?.emailAddress;
+                    const res = await api.post("/api/orders/repair", { user_id: user.id, email });
+                    if (res.data.count > 0) {
+                      alert(`Found and linked ${res.data.count} orders!`);
+                      fetchOrders();
+                    } else {
+                      alert("No orphaned orders found.");
+                    }
+                  } catch (e) {
+                    alert("Repair failed.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                  className="btn-ghost" 
+                  style={{ fontSize: "0.85rem", color: "#6366f1", fontWeight: 700, padding: "12px", borderRadius: "14px", border: "1px solid #6366f120", cursor: "pointer" }}
+                >
+                  Missing an order? Repair History
+                </button>
+              </div>
             </div>
           </div>
         ) : (
           <div className="stack" style={{ gap: 32 }}>
-            {orders.map((order) => (
+            {filteredOrders.map((order) => (
               <div key={order.id} className="order-card" style={{
                 background: "#fff", 
                 borderRadius: "24px", 

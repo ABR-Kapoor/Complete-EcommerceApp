@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCartStore } from "../store/cartStore";
 import { useUser } from "@clerk/clerk-react";
+import { useUserStore } from "../store/userStore";
 import api from "../lib/api";
 import { Navbar } from "../components/Navbar";
 import { Check, Truck, DollarSign, CreditCard } from "lucide-react";
@@ -16,11 +17,12 @@ const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || "";
 
 export const Checkout = () => {
   const navigate = useNavigate();
+  const { user } = useUser();
   const items = useCartStore((state) => state.items);
   const total = useCartStore((state) => state.total)();
   const clearCart = useCartStore((state) => state.clear);
   const removeByProductIds = useCartStore((state) => state.removeByProductIds);
-  const { user } = useUser();
+  const { profile, fetchAddress } = useUserStore();
 
   const [step, setStep] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<string>(
@@ -37,33 +39,29 @@ export const Checkout = () => {
     phone: "",
   });
 
+  // Sync state with global store for real-time autofill
   useEffect(() => {
-    if (user) {
-      // 1. Fetch saved address
-      api.get(`/api/users/${user.id}/address`).then(res => {
-        if (res.data && Object.keys(res.data).length > 0) {
-          setAddress(prev => ({
-            ...prev,
-            street: res.data.street || "",
-            city: res.data.city || "",
-            state: res.data.state || "",
-            zip_code: res.data.zip_code || "",
-            phone: res.data.phone || prev.phone,
-          }));
-        }
-      }).catch(err => console.error("Failed to fetch address", err));
-
-      // 2. Fetch primary phone from profile if missing
-      api.get(`/api/users/${user.id}`).then(res => {
-        if (res.data?.phone) {
-          setAddress(prev => ({
-            ...prev,
-            phone: prev.phone || res.data.phone
-          }));
-        }
-      }).catch(() => {});
+    if (profile?.address) {
+      const addr = profile.address;
+      setAddress({
+        street: addr.street || "",
+        city: addr.city || "",
+        state: addr.state || "",
+        zip_code: addr.zip_code || "",
+        phone: addr.phone || profile.phone || "",
+      });
+    } else if (profile?.phone) {
+      setAddress(prev => ({ ...prev, phone: profile.phone }));
     }
-  }, [user]);
+  }, [profile]);
+
+  // Initial fetch if store is empty
+  useEffect(() => {
+    const uid = user?.id;
+    if (uid && !profile?.address) {
+      fetchAddress(uid);
+    }
+  }, [user?.id, profile?.address, fetchAddress]);
 
   const cartCount = items.reduce((s, i) => s + i.quantity, 0);
 
@@ -150,6 +148,7 @@ export const Checkout = () => {
         const response = await api.post("/api/orders/create", {
           user_id: user.id,
           email: user.primaryEmailAddress?.emailAddress,
+          phone: user.primaryPhoneNumber?.phoneNumber,
           name: user.fullName || user.firstName,
           total_price: total,
           payment_method: "COD",
