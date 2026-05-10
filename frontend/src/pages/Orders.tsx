@@ -16,7 +16,6 @@ import {
   Package,
   Calendar,
   MapPin,
-  Clock,
   ChevronRight
 } from "lucide-react";
 
@@ -150,7 +149,6 @@ const StatusTimeline = ({ status }: { status: string }) => {
 export const Orders = () => {
   const { user, isLoaded, isSignedIn } = useUser();
   const navigate = useNavigate();
-  const { profile } = useUserStore();
   const syncProfile = useUserStore((state) => state.syncProfile);
 
   useEffect(() => {
@@ -166,7 +164,6 @@ export const Orders = () => {
   }, [isLoaded, isSignedIn, user, syncProfile]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const fetchOrders = useCallback(async () => {
     const uid = user?.id;
@@ -175,7 +172,6 @@ export const Orders = () => {
       const email = user.primaryEmailAddress?.emailAddress;
       const res = await api.get(`/api/orders/user/${uid}${email ? `?email=${email}` : ""}`);
       setOrders(res.data || []);
-      setLastRefresh(new Date());
     } catch (e) {
       console.error("Fetch failed", e);
     } finally {
@@ -218,6 +214,17 @@ export const Orders = () => {
     const id = setInterval(() => { if (user) fetchOrders(); }, 5000);
     return () => clearInterval(id);
   }, [user, fetchOrders]);
+
+  const [filter, setFilter] = useState("all");
+  const [sort, setSort] = useState("newest");
+
+  const filteredOrders = orders
+    .filter(o => filter === "all" || (o.status || "").toLowerCase() === filter.toLowerCase())
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sort === "newest" ? dateB - dateA : dateA - dateB;
+    });
 
   const handleCancelOrder = async (orderId: number) => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
