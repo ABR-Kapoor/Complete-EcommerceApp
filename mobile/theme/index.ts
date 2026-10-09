@@ -1,8 +1,8 @@
 export const colors = {
-  primary: '#0A6B5C',
-  primaryLight: '#0E8A73',
-  primaryDark: '#075248',
-  primarySoft: '#E8F5F1',
+  primary: '#11A559',
+  primaryLight: '#22C55E',
+  primaryDark: '#15803D',
+  primarySoft: '#F0FDF4',
 
   secondary: '#1B3A4B',
   secondaryLight: '#264F65',
@@ -37,8 +37,8 @@ export const colors = {
   skeletonHighlight: '#F2F6F5',
 
   overlay: 'rgba(26, 43, 46, 0.5)',
-  shadow: 'rgba(10, 107, 92, 0.08)',
-  shadowDark: 'rgba(10, 107, 92, 0.16)',
+  shadow: 'rgba(17, 165, 89, 0.08)',
+  shadowDark: 'rgba(17, 165, 89, 0.16)',
 };
 
 export const fonts = {

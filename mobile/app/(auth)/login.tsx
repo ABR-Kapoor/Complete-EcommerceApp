@@ -9,57 +9,74 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { useSignIn } from '@clerk/expo';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useSignIn, useOAuth } from '@clerk/expo';
+import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
 import { getClerkErrorMessage } from '../../services/clerkError';
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen() {
   const { signIn } = useSignIn();
+  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const handleSignIn = useCallback(async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+      setErrorMsg('Please enter your email and password.');
       return;
     }
 
+    setErrorMsg('');
     setLoading(true);
     try {
       const { error } = await signIn.password({
-        emailAddress: email.trim(),
-        password: password,
+        identifier: email.trim(),
+        password,
       });
 
       if (error) {
-        Alert.alert('Sign In Error', getClerkErrorMessage(error, 'Sign in failed. Please check your credentials.'));
+        setErrorMsg(getClerkErrorMessage(error, 'Sign in failed. Please check your credentials.'));
         return;
       }
 
       if (signIn.status === 'complete') {
-        const { error: finalizeError } = await signIn.finalize();
-        if (finalizeError) {
-          Alert.alert('Sign In Error', getClerkErrorMessage(finalizeError));
-          return;
-        }
+        await signIn.finalize();
         router.replace('/(tabs)');
       } else if (signIn.status === 'needs_second_factor' || signIn.status === 'needs_client_trust') {
-        Alert.alert('Sign In', 'Additional verification is required.');
+        setErrorMsg('Additional verification is required.');
       } else {
-        Alert.alert('Sign In', 'Sign in could not be completed.');
+        setErrorMsg('Sign in could not be completed.');
       }
+    } catch (err: unknown) {
+      setErrorMsg(getClerkErrorMessage(err, 'Sign in failed. Please check your credentials.'));
     } finally {
       setLoading(false);
     }
   }, [email, password, router, signIn]);
+
+  const handleGoogleSignIn = useCallback(async () => {
+    try {
+      const { createdSessionId, setActive } = await startOAuthFlow();
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.replace('/(tabs)');
+      }
+    } catch {
+      setErrorMsg('Failed to sign in with Google');
+    }
+  }, [startOAuthFlow, router]);
 
   return (
     <KeyboardAvoidingView
@@ -71,75 +88,74 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Brand Header */}
-        <View style={styles.brandSection}>
-          <View style={styles.logoContainer}>
-            <MaterialCommunityIcons
-              name="hospital-building"
-              size={48}
-              color={colors.primary}
-            />
+        {/* Top Curved Green Background */}
+        <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.topCurvedSection}>
+          <View style={styles.topCurvedBackground} />
+          {/* We use an icon as a placeholder for the illustration */}
+          <View style={styles.illustrationPlaceholder}>
+            <MaterialCommunityIcons name="shopping" size={80} color="#FFFFFF" opacity={0.8} />
           </View>
-          <Text style={styles.brandName}>AuraMart</Text>
-          <Text style={styles.brandTagline}>Healthcare marketplace</Text>
-        </View>
+        </Animated.View>
 
-        {/* Form */}
-        <View style={styles.formSection}>
-          <Text style={styles.formTitle}>Welcome back</Text>
-          <Text style={styles.formSubtitle}>
-            Sign in to your account to continue
+        {/* Form Content */}
+        <Animated.View entering={FadeInUp.duration(600).delay(300).springify().damping(14)} style={styles.formContainer}>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.titleText, { color: colors.primary }]}>Hello </Text>
+            <Text style={styles.titleText}>Again!</Text>
+          </View>
+          <Text style={styles.subtitleText}>
+            Fill your details or continue with{'\n'}social media.
           </Text>
 
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
+
           {/* Email */}
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="email-outline"
-              size={20}
-              color={colors.textTertiary}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Email address"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              textContentType="emailAddress"
-            />
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Email</Text>
+            <View style={[styles.inputContainer, focusedInput === 'email' && styles.inputContainerFocused]}>
+              <TextInput
+                style={styles.input}
+                placeholder="imshuvo97@gmail.com"
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+              />
+            </View>
           </View>
 
           {/* Password */}
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="lock-outline"
-              size={20}
-              color={colors.textTertiary}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={colors.textTertiary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              textContentType="password"
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <MaterialCommunityIcons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={colors.textTertiary}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Password</Text>
+            <View style={[styles.inputContainer, focusedInput === 'password' && styles.inputContainerFocused]}>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textTertiary}
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setFocusedInput('password')}
+                onBlur={() => setFocusedInput(null)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                textContentType="password"
               />
-            </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <MaterialCommunityIcons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textTertiary}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Forgot Password */}
@@ -147,12 +163,12 @@ export default function LoginScreen() {
             style={styles.forgotPassword}
             onPress={() => router.push('/(auth)/forgot-password')}
           >
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
           {/* Sign In Button */}
           <TouchableOpacity
-            style={[styles.signInButton, loading && styles.signInButtonDisabled]}
+            style={[styles.primaryButton, loading && styles.buttonDisabled]}
             onPress={handleSignIn}
             disabled={loading}
             activeOpacity={0.85}
@@ -160,38 +176,24 @@ export default function LoginScreen() {
             {loading ? (
               <ActivityIndicator color={colors.textInverse} size="small" />
             ) : (
-              <Text style={styles.signInButtonText}>Sign In</Text>
+              <Text style={styles.primaryButtonText}>Sign In</Text>
             )}
           </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Sign Up */}
-          <TouchableOpacity
-            style={styles.signUpButton}
-            onPress={() => router.push('/(auth)/register')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.signUpButtonText}>Create an account</Text>
+          {/* Google Sign In Button */}
+          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignIn} activeOpacity={0.8}>
+            <MaterialCommunityIcons name="google" size={20} color="#DB4437" style={{ marginRight: 10 }} />
+            <Text style={styles.googleButtonText}>Sign In With Google</Text>
           </TouchableOpacity>
-        </View>
 
-        {/* Trust footer */}
-        <View style={styles.trustSection}>
-          <MaterialCommunityIcons
-            name="shield-check-outline"
-            size={16}
-            color={colors.textTertiary}
-          />
-          <Text style={styles.trustText}>
-            Secure authentication powered by Clerk
-          </Text>
-        </View>
+          {/* Create Account Link */}
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>New User? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.footerLink}>Create Account</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -200,74 +202,87 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: spacing['4xl'],
+  },
+  topCurvedSection: {
+    height: 320,
+    width: '100%',
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing['2xl'],
+  },
+  topCurvedBackground: {
+    position: 'absolute',
+    top: -100, // Make it big enough to curve naturally at the bottom
+    left: -50,
+    right: -50,
+    height: 420,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 200,
+    borderBottomRightRadius: 200,
+  },
+  illustrationPlaceholder: {
+    marginTop: 40,
+  },
+  formContainer: {
     paddingHorizontal: spacing['2xl'],
-    paddingTop: spacing['6xl'],
-    paddingBottom: spacing['3xl'],
+  },
+  titleContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
-  },
-  brandSection: {
-    alignItems: 'center',
-    marginBottom: spacing['4xl'],
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  brandName: {
-    fontFamily: fonts.headingBold,
-    fontSize: fontSize['2xl'],
-    color: colors.primary,
-    letterSpacing: -0.5,
-  },
-  brandTagline: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  formSection: {
-    marginBottom: spacing['3xl'],
-  },
-  formTitle: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.xl,
-    color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
-  formSubtitle: {
+  titleText: {
+    fontFamily: fonts.headingBold,
+    fontSize: 28,
+    color: colors.textPrimary,
+  },
+  subtitleText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing['2xl'],
+    color: colors.textTertiary,
+    textAlign: 'center',
+    marginBottom: spacing['3xl'],
+    lineHeight: 20,
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  inputWrapper: {
+    marginBottom: spacing.xl,
+  },
+  inputLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginBottom: 4,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    height: 52,
-    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    height: 40,
   },
-  inputIcon: {
-    marginRight: spacing.md,
+  inputContainerFocused: {
+    borderBottomColor: colors.primary,
+    borderBottomWidth: 2,
   },
   input: {
     flex: 1,
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 15,
     color: colors.textPrimary,
+    paddingBottom: 4,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
@@ -275,64 +290,52 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.primary,
+    fontSize: 12,
+    color: colors.textPrimary,
   },
-  signInButton: {
+  primaryButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: spacing.lg,
   },
-  signInButtonDisabled: {
+  buttonDisabled: {
     opacity: 0.7,
   },
-  signInButtonText: {
+  primaryButtonText: {
     fontFamily: fonts.heading,
     fontSize: fontSize.md,
     color: colors.textInverse,
-    letterSpacing: 0.3,
   },
-  divider: {
+  googleButton: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing['2xl'],
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textTertiary,
-    marginHorizontal: spacing.lg,
-  },
-  signUpButton: {
+    backgroundColor: '#F3F4F6',
     borderRadius: radius.md,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
+    marginBottom: spacing['3xl'],
   },
-  signUpButtonText: {
+  googleButtonText: {
     fontFamily: fonts.heading,
     fontSize: fontSize.md,
-    color: colors.primary,
-    letterSpacing: 0.3,
+    color: colors.textPrimary,
   },
-  trustSection: {
+  footerContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
   },
-  trustText: {
+  footerText: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.textTertiary,
+  },
+  footerLink: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.sm,
+    color: colors.primary,
   },
 });

@@ -37,7 +37,12 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
         else:
             payload["role"] = res_existing.data.get("role", "user")
             
-        client.table("users").upsert(payload, on_conflict="id").execute()
+        try:
+            client.table("users").upsert(payload, on_conflict="id").execute()
+        except Exception as e:
+            if "204" not in str(e) and "Missing response" not in str(e):
+                raise e
+
         final = client.table("users").select("*").eq("id", user_id).single().execute()
         return final.data
     except Exception as e:

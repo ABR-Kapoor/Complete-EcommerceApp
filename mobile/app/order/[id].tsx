@@ -94,7 +94,13 @@ export default function OrderDetailScreen() {
       <View style={styles.centered}>
         <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.error} />
         <Text style={styles.emptyTitle}>Order Not Found</Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)');
+          }
+        }}>
           <Text style={styles.backBtnText}>Go Back</Text>
         </TouchableOpacity>
       </View>

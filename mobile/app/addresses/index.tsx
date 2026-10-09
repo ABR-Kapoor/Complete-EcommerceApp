@@ -61,7 +61,13 @@ export default function AddressScreen() {
         phone: phone.trim(),
       });
       Alert.alert('Success', 'Address updated successfully.', [
-        { text: 'OK', onPress: () => router.back() },
+        { text: 'OK', onPress: () => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)');
+          }
+        } },
       ]);
     } catch {
       Alert.alert('Error', 'Failed to save address.');

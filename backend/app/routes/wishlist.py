@@ -5,9 +5,13 @@ router = APIRouter(prefix="/api/wishlist", tags=["wishlist"])
 
 @router.get("/{user_id}")
 def get_wishlist(user_id: str):
-    client = get_supabase_admin()
-    data = client.table("wishlists").select("product_id").eq("user_id", user_id).execute()
-    return [item["product_id"] for item in data.data or []]
+    try:
+        client = get_supabase_admin()
+        data = client.table("wishlists").select("product_id").eq("user_id", user_id).execute()
+        return [item["product_id"] for item in data.data or []]
+    except Exception as e:
+        print(f"Wishlist Error: {e}")
+        return []
 
 @router.post("/{user_id}/{product_id}")
 def add_to_wishlist(user_id: str, product_id: int):

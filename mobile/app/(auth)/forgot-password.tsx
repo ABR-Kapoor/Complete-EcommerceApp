@@ -9,8 +9,8 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useSignIn } from '@clerk/expo';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -26,28 +26,32 @@ export default function ForgotPasswordScreen() {
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
   const handleSendCode = useCallback(async () => {
     if (!email.trim()) {
-      Alert.alert('Missing email', 'Please enter your email address.');
+      setErrorMsg('Please enter your email address.');
       return;
     }
 
+    setErrorMsg('');
     setLoading(true);
     try {
       const { error } = await signIn.create({ identifier: email.trim() });
       if (error) {
-        Alert.alert('Error', getClerkErrorMessage(error, 'Failed to send reset code.'));
+        setErrorMsg(getClerkErrorMessage(error, 'Failed to send reset code.'));
         return;
       }
 
       const { error: sendError } = await signIn.resetPasswordEmailCode.sendCode();
       if (sendError) {
-        Alert.alert('Error', getClerkErrorMessage(sendError, 'Failed to send reset code.'));
+        setErrorMsg(getClerkErrorMessage(sendError, 'Failed to send reset code.'));
         return;
       }
 
       setCodeSent(true);
+      setErrorMsg('');
     } finally {
       setLoading(false);
     }
@@ -55,17 +59,18 @@ export default function ForgotPasswordScreen() {
 
   const handleReset = useCallback(async () => {
     if (!code.trim() || !newPassword.trim()) {
-      Alert.alert('Missing fields', 'Please enter the code and new password.');
+      setErrorMsg('Please enter the code and new password.');
       return;
     }
 
+    setErrorMsg('');
     setLoading(true);
     try {
       const { error } = await signIn.resetPasswordEmailCode.verifyCode({
         code: code.trim(),
       });
       if (error) {
-        Alert.alert('Error', getClerkErrorMessage(error, 'Password reset failed.'));
+        setErrorMsg(getClerkErrorMessage(error, 'Password reset failed.'));
         return;
       }
 
@@ -74,19 +79,19 @@ export default function ForgotPasswordScreen() {
         signOutOfOtherSessions: true,
       });
       if (submitError) {
-        Alert.alert('Error', getClerkErrorMessage(submitError, 'Password reset failed.'));
+        setErrorMsg(getClerkErrorMessage(submitError, 'Password reset failed.'));
         return;
       }
 
       if (signIn.status === 'complete') {
         const { error: finalizeError } = await signIn.finalize();
         if (finalizeError) {
-          Alert.alert('Error', getClerkErrorMessage(finalizeError));
+          setErrorMsg(getClerkErrorMessage(finalizeError));
           return;
         }
-        Alert.alert('Success', 'Password reset successfully.', [
-          { text: 'OK', onPress: () => router.replace('/(auth)/login') },
-        ]);
+        
+        // Push back to login on success
+        router.replace('/(auth)/login');
       }
     } finally {
       setLoading(false);
@@ -101,182 +106,238 @@ export default function ForgotPasswordScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(auth)/login');
+            }
+          }}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={24}
-            color={colors.textPrimary}
-          />
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
+        {/* Top Curved Green Background */}
+        <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.topCurvedSection}>
+          <View style={styles.topCurvedBackground} />
+          <View style={styles.illustrationPlaceholder}>
             <MaterialCommunityIcons
-              name={codeSent ? 'email-check-outline' : 'lock-reset'}
-              size={48}
-              color={colors.primary}
+              name={codeSent ? "email-check-outline" : "lock-reset"}
+              size={80}
+              color="#FFFFFF"
+              opacity={0.8}
             />
           </View>
-          <Text style={styles.title}>
-            {codeSent ? 'Enter reset code' : 'Forgot password?'}
-          </Text>
-          <Text style={styles.subtitle}>
+        </Animated.View>
+
+        {/* Form Content */}
+        <Animated.View entering={FadeInUp.duration(600).delay(200).springify().damping(14)} style={styles.formContainer}>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.titleText, { color: colors.primary }]}>
+              {codeSent ? 'Enter code' : 'Forgot '}
+            </Text>
+            <Text style={styles.titleText}>
+              {codeSent ? '' : 'password?'}
+            </Text>
+          </View>
+          <Text style={styles.subtitleText}>
             {codeSent
               ? `We sent a code to ${email}`
               : "Enter your email and we'll send you a reset code."}
           </Text>
-        </View>
 
-        {!codeSent ? (
-          <>
-            <View style={styles.inputContainer}>
-              <MaterialCommunityIcons
-                name="email-outline"
-                size={20}
-                color={colors.textTertiary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor={colors.textTertiary}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoFocus
-              />
-            </View>
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
-            <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.disabled]}
-              onPress={handleSendCode}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.textInverse} size="small" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Send Reset Code</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <View style={styles.inputContainer}>
-              <MaterialCommunityIcons
-                name="numeric"
-                size={20}
-                color={colors.textTertiary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Verification code"
-                placeholderTextColor={colors.textTertiary}
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                autoFocus
-              />
-            </View>
+          {!codeSent ? (
+            <>
+              {/* Email Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <View style={[styles.inputContainer, focusedInput === 'email' && styles.inputContainerFocused]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Email address"
+                    placeholderTextColor={colors.textTertiary}
+                    value={email}
+                    onChangeText={setEmail}
+                    onFocus={() => setFocusedInput('email')}
+                    onBlur={() => setFocusedInput(null)}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+                </View>
+              </View>
 
-            <View style={styles.inputContainer}>
-              <MaterialCommunityIcons
-                name="lock-outline"
-                size={20}
-                color={colors.textTertiary}
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="New password"
-                placeholderTextColor={colors.textTertiary}
-                value={newPassword}
-                onChangeText={setNewPassword}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-            </View>
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.disabled]}
+                onPress={handleSendCode}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.textInverse} size="small" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Send Reset Code</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              {/* Code Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>Verification Code</Text>
+                <View style={[styles.inputContainer, focusedInput === 'code' && styles.inputContainerFocused]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter 6-digit code"
+                    placeholderTextColor={colors.textTertiary}
+                    value={code}
+                    onChangeText={setCode}
+                    onFocus={() => setFocusedInput('code')}
+                    onBlur={() => setFocusedInput(null)}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </View>
 
-            <TouchableOpacity
-              style={[styles.primaryButton, loading && styles.disabled]}
-              onPress={handleReset}
-              disabled={loading}
-              activeOpacity={0.85}
-            >
-              {loading ? (
-                <ActivityIndicator color={colors.textInverse} size="small" />
-              ) : (
-                <Text style={styles.primaryButtonText}>Reset Password</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
+              {/* New Password Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputLabel}>New Password</Text>
+                <View style={[styles.inputContainer, focusedInput === 'newPassword' && styles.inputContainerFocused]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter new password"
+                    placeholderTextColor={colors.textTertiary}
+                    value={newPassword}
+                    onChangeText={setNewPassword}
+                    onFocus={() => setFocusedInput('newPassword')}
+                    onBlur={() => setFocusedInput(null)}
+                    secureTextEntry
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
+
+              {/* Submit Button */}
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.disabled]}
+                onPress={handleReset}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.textInverse} size="small" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Reset Password</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing['2xl'],
-    paddingTop: spacing['5xl'],
-    paddingBottom: spacing['3xl'],
+    paddingBottom: spacing['4xl'],
   },
   backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 60 : 40,
+    left: spacing.lg,
+    zIndex: 10,
     width: 44,
     height: 44,
     justifyContent: 'center',
-    marginBottom: spacing.xl,
   },
-  header: { alignItems: 'center', marginBottom: spacing['3xl'] },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primarySoft,
-    justifyContent: 'center',
+  topCurvedSection: {
+    height: 320,
+    width: '100%',
+    position: 'relative',
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    justifyContent: 'center',
+    marginBottom: spacing['2xl'],
   },
-  title: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.xl,
+  topCurvedBackground: {
+    position: 'absolute',
+    top: -100,
+    left: -50,
+    right: -50,
+    height: 420,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 200,
+    borderBottomRightRadius: 200,
+  },
+  illustrationPlaceholder: {
+    marginTop: 40,
+  },
+  formContainer: {
+    paddingHorizontal: spacing['2xl'],
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  titleText: {
+    fontFamily: fonts.headingBold,
+    fontSize: 28,
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
   },
-  subtitle: {
+  subtitleText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
+    color: colors.textTertiary,
     textAlign: 'center',
+    marginBottom: spacing['3xl'],
     lineHeight: 20,
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  inputWrapper: {
+    marginBottom: spacing.xl,
+  },
+  inputLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginBottom: 4,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    height: 52,
-    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    height: 40,
   },
-  inputIcon: { marginRight: spacing.md },
+  inputContainerFocused: {
+    borderBottomColor: colors.primary,
+    borderBottomWidth: 2,
+  },
   input: {
     flex: 1,
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 15,
     color: colors.textPrimary,
+    paddingBottom: 4,
   },
   primaryButton: {
     backgroundColor: colors.primary,
@@ -284,13 +345,15 @@ const styles = StyleSheet.create({
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: spacing.lg,
     marginTop: spacing.sm,
   },
-  disabled: { opacity: 0.7 },
+  disabled: {
+    opacity: 0.7,
+  },
   primaryButtonText: {
     fontFamily: fonts.heading,
     fontSize: fontSize.md,
     color: colors.textInverse,
-    letterSpacing: 0.3,
   },
 });

@@ -9,16 +9,20 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
-import { useSignUp } from '@clerk/expo';
+import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useSignUp, useOAuth } from '@clerk/expo';
+import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
 import { getClerkErrorMessage } from '../../services/clerkError';
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function RegisterScreen() {
   const { signUp } = useSignUp();
+  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -28,34 +32,39 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState('');
+  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSignUp = useCallback(async () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please fill in all fields.');
+      setErrorMsg('Please fill in all fields.');
       return;
     }
 
+    setErrorMsg('');
     setLoading(true);
     try {
       const { error } = await signUp.password({
         firstName: name.split(' ')[0],
         lastName: name.split(' ').slice(1).join(' ') || undefined,
         emailAddress: email.trim(),
-        password: password,
+        password,
       });
 
       if (error) {
-        Alert.alert('Sign Up Error', getClerkErrorMessage(error, 'Registration failed. Please try again.'));
+        setErrorMsg(getClerkErrorMessage(error, 'Registration failed. Please try again.'));
         return;
       }
 
       const { error: sendError } = await signUp.verifications.sendEmailCode();
       if (sendError) {
-        Alert.alert('Sign Up Error', getClerkErrorMessage(sendError, 'Could not send verification code.'));
+        setErrorMsg(getClerkErrorMessage(sendError, 'Could not send the verification code.'));
         return;
       }
 
       setPendingVerification(true);
+    } catch (err: unknown) {
+      setErrorMsg(getClerkErrorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -63,10 +72,11 @@ export default function RegisterScreen() {
 
   const handleVerify = useCallback(async () => {
     if (!code.trim()) {
-      Alert.alert('Missing code', 'Please enter the verification code.');
+      setErrorMsg('Please enter the verification code.');
       return;
     }
 
+    setErrorMsg('');
     setLoading(true);
     try {
       const { error } = await signUp.verifications.verifyEmailCode({
@@ -74,22 +84,34 @@ export default function RegisterScreen() {
       });
 
       if (error) {
-        Alert.alert('Verification Error', getClerkErrorMessage(error, 'Verification failed. Please try again.'));
+        setErrorMsg(getClerkErrorMessage(error, 'Verification failed. Please try again.'));
         return;
       }
 
       if (signUp.status === 'complete') {
-        const { error: finalizeError } = await signUp.finalize();
-        if (finalizeError) {
-          Alert.alert('Sign Up Error', getClerkErrorMessage(finalizeError));
-          return;
-        }
+        await signUp.finalize();
         router.replace('/(tabs)');
+      } else {
+        setErrorMsg('Verification could not be completed.');
       }
+    } catch (err: unknown) {
+      setErrorMsg(getClerkErrorMessage(err, 'Verification failed. Please try again.'));
     } finally {
       setLoading(false);
     }
   }, [code, router, signUp]);
+
+  const handleGoogleSignUp = useCallback(async () => {
+    try {
+      const { createdSessionId, setActive } = await startOAuthFlow();
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.replace('/(tabs)');
+      }
+    } catch {
+      setErrorMsg('Failed to sign up with Google');
+    }
+  }, [startOAuthFlow, router]);
 
   if (pendingVerification) {
     return (
@@ -101,51 +123,56 @@ export default function RegisterScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.brandSection}>
-            <View style={styles.iconContainer}>
-              <MaterialCommunityIcons
-                name="email-check-outline"
-                size={48}
-                color={colors.primary}
-              />
+          {/* Top Curved Green Background */}
+          <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.topCurvedSection}>
+            <View style={styles.topCurvedBackground} />
+            <View style={styles.illustrationPlaceholder}>
+              <MaterialCommunityIcons name="email-check-outline" size={80} color="#FFFFFF" opacity={0.8} />
             </View>
-            <Text style={styles.formTitle}>Verify your email</Text>
-            <Text style={styles.formSubtitle}>
+          </Animated.View>
+
+          <Animated.View entering={FadeInUp.duration(600).delay(200).springify().damping(14)} style={styles.formContainer}>
+            <View style={styles.titleContainer}>
+              <Text style={[styles.titleText, { color: colors.primary }]}>Verify </Text>
+              <Text style={styles.titleText}>Email</Text>
+            </View>
+            <Text style={styles.subtitleText}>
               We sent a verification code to{'\n'}
               {email}
             </Text>
-          </View>
 
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="numeric"
-              size={20}
-              color={colors.textTertiary}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Verification code"
-              placeholderTextColor={colors.textTertiary}
-              value={code}
-              onChangeText={setCode}
-              keyboardType="number-pad"
-              autoFocus
-            />
-          </View>
+            {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
-          <TouchableOpacity
-            style={[styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleVerify}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.textInverse} size="small" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Verify Email</Text>
-            )}
-          </TouchableOpacity>
+            <View style={styles.inputWrapper}>
+              <Text style={styles.inputLabel}>Verification Code</Text>
+              <View style={[styles.inputContainer, focusedInput === 'code' && styles.inputContainerFocused]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter 6-digit code"
+                  placeholderTextColor={colors.textTertiary}
+                  value={code}
+                  onChangeText={setCode}
+                  onFocus={() => setFocusedInput('code')}
+                  onBlur={() => setFocusedInput(null)}
+                  keyboardType="number-pad"
+                  autoFocus
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.primaryButton, loading && styles.buttonDisabled]}
+              onPress={handleVerify}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.textInverse} size="small" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Verify Email</Text>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     );
@@ -161,91 +188,94 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Brand */}
-        <View style={styles.brandSection}>
-          <View style={styles.logoContainer}>
-            <MaterialCommunityIcons
-              name="hospital-building"
-              size={48}
-              color={colors.primary}
-            />
+        {/* Top Curved Green Background */}
+        <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.topCurvedSection}>
+          <View style={styles.topCurvedBackground} />
+          <View style={styles.illustrationPlaceholder}>
+            <MaterialCommunityIcons name="shopping-outline" size={80} color="#FFFFFF" opacity={0.8} />
           </View>
-          <Text style={styles.brandName}>AuraMart</Text>
-        </View>
+        </Animated.View>
 
-        {/* Form */}
-        <View style={styles.formSection}>
-          <Text style={styles.formTitle}>Create account</Text>
-          <Text style={styles.formSubtitle}>
-            Join AuraMart for trusted healthcare products
+        {/* Form Content */}
+        <Animated.View entering={FadeInUp.duration(600).delay(300).springify().damping(14)} style={styles.formContainer}>
+          <View style={styles.titleContainer}>
+            <Text style={[styles.titleText, { color: colors.primary }]}>Create </Text>
+            <Text style={styles.titleText}>Account</Text>
+          </View>
+          <Text style={styles.subtitleText}>
+            Fill your details or continue with{'\n'}social media.
           </Text>
 
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="account-outline"
-              size={20}
-              color={colors.textTertiary}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Full name"
-              placeholderTextColor={colors.textTertiary}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-              textContentType="name"
-            />
-          </View>
+          {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
 
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="email-outline"
-              size={20}
-              color={colors.textTertiary}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Email address"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              textContentType="emailAddress"
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <MaterialCommunityIcons
-              name="lock-outline"
-              size={20}
-              color={colors.textTertiary}
-              style={styles.inputIcon}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              placeholderTextColor={colors.textTertiary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              textContentType="newPassword"
-            />
-            <TouchableOpacity
-              onPress={() => setShowPassword(!showPassword)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <MaterialCommunityIcons
-                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={colors.textTertiary}
+          {/* Name */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Full Name</Text>
+            <View style={[styles.inputContainer, focusedInput === 'name' && styles.inputContainerFocused]}>
+              <TextInput
+                style={styles.input}
+                placeholder="Jhon Doe"
+                placeholderTextColor={colors.textTertiary}
+                value={name}
+                onChangeText={setName}
+                onFocus={() => setFocusedInput('name')}
+                onBlur={() => setFocusedInput(null)}
+                autoCapitalize="words"
+                textContentType="name"
               />
-            </TouchableOpacity>
+            </View>
           </View>
 
+          {/* Email */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Email</Text>
+            <View style={[styles.inputContainer, focusedInput === 'email' && styles.inputContainerFocused]}>
+              <TextInput
+                style={styles.input}
+                placeholder="imshuvo97@gmail.com"
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={setEmail}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+              />
+            </View>
+          </View>
+
+          {/* Password */}
+          <View style={styles.inputWrapper}>
+            <Text style={styles.inputLabel}>Password</Text>
+            <View style={[styles.inputContainer, focusedInput === 'password' && styles.inputContainerFocused]}>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textTertiary}
+                value={password}
+                onChangeText={setPassword}
+                onFocus={() => setFocusedInput('password')}
+                onBlur={() => setFocusedInput(null)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                textContentType="newPassword"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <MaterialCommunityIcons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textTertiary}
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Sign Up Button */}
           <TouchableOpacity
             style={[styles.primaryButton, loading && styles.buttonDisabled]}
             onPress={handleSignUp}
@@ -255,29 +285,27 @@ export default function RegisterScreen() {
             {loading ? (
               <ActivityIndicator color={colors.textInverse} size="small" />
             ) : (
-              <Text style={styles.primaryButtonText}>Create Account</Text>
+              <Text style={styles.primaryButtonText}>Sign Up</Text>
             )}
           </TouchableOpacity>
 
-          {/* Required for sign-up flows on Expo web; Clerk skips CAPTCHA on iOS/Android */}
+          {/* Required for sign-up flows on Expo web */}
           <View nativeID="clerk-captcha" />
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.back()}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.secondaryButtonText}>
-              Already have an account? Sign in
-            </Text>
+          {/* Google Sign In Button */}
+          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp} activeOpacity={0.8}>
+            <MaterialCommunityIcons name="google" size={20} color="#DB4437" style={{ marginRight: 10 }} />
+            <Text style={styles.googleButtonText}>Sign Up With Google</Text>
           </TouchableOpacity>
-        </View>
+
+          {/* Create Account Link */}
+          <View style={styles.footerContainer}>
+            <Text style={styles.footerText}>Already Have Account? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+              <Text style={styles.footerLink}>Log In</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -286,80 +314,87 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing['2xl'],
-    paddingTop: spacing['5xl'],
-    paddingBottom: spacing['3xl'],
-    justifyContent: 'center',
+    paddingBottom: spacing['4xl'],
   },
-  brandSection: {
+  topCurvedSection: {
+    height: 320,
+    width: '100%',
+    position: 'relative',
     alignItems: 'center',
-    marginBottom: spacing['3xl'],
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primarySoft,
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: spacing.xl,
   },
-  brandName: {
-    fontFamily: fonts.headingBold,
-    fontSize: fontSize['2xl'],
-    color: colors.primary,
-    letterSpacing: -0.5,
+  topCurvedBackground: {
+    position: 'absolute',
+    top: -100,
+    left: -50,
+    right: -50,
+    height: 420,
+    backgroundColor: colors.primary,
+    borderBottomLeftRadius: 200,
+    borderBottomRightRadius: 200,
   },
-  formSection: {
-    marginBottom: spacing['2xl'],
+  illustrationPlaceholder: {
+    marginTop: 40,
   },
-  formTitle: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.xl,
-    color: colors.textPrimary,
+  formContainer: {
+    paddingHorizontal: spacing['2xl'],
+  },
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     marginBottom: spacing.xs,
-    textAlign: 'center',
   },
-  formSubtitle: {
+  titleText: {
+    fontFamily: fonts.headingBold,
+    fontSize: 28,
+    color: colors.textPrimary,
+  },
+  subtitleText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing['2xl'],
+    color: colors.textTertiary,
     textAlign: 'center',
+    marginBottom: spacing['3xl'],
     lineHeight: 20,
+  },
+  errorText: {
+    color: colors.error,
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  inputWrapper: {
+    marginBottom: spacing.xl,
+  },
+  inputLabel: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    color: colors.textTertiary,
+    marginBottom: 4,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.lg,
-    height: 52,
-    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    height: 40,
   },
-  inputIcon: {
-    marginRight: spacing.md,
+  inputContainerFocused: {
+    borderBottomColor: colors.primary,
+    borderBottomWidth: 2,
   },
   input: {
     flex: 1,
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 15,
     color: colors.textPrimary,
+    paddingBottom: 4,
   },
   primaryButton: {
     backgroundColor: colors.primary,
@@ -367,6 +402,7 @@ const styles = StyleSheet.create({
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: spacing.lg,
     marginTop: spacing.sm,
   },
   buttonDisabled: {
@@ -376,34 +412,33 @@ const styles = StyleSheet.create({
     fontFamily: fonts.heading,
     fontSize: fontSize.md,
     color: colors.textInverse,
-    letterSpacing: 0.3,
   },
-  divider: {
+  googleButton: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing['2xl'],
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textTertiary,
-    marginHorizontal: spacing.lg,
-  },
-  secondaryButton: {
+    backgroundColor: '#F3F4F6',
     borderRadius: radius.md,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.primary,
+    marginBottom: spacing['3xl'],
   },
-  secondaryButtonText: {
-    fontFamily: fonts.bodyMedium,
+  googleButtonText: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
+  footerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  footerText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+  },
+  footerLink: {
+    fontFamily: fonts.heading,
     fontSize: fontSize.sm,
     color: colors.primary,
   },
