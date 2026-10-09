@@ -15,14 +15,21 @@ def create_or_update_user(data: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="User ID is required")
 
     try:
+        email = data.get("email", "")
         payload = {
             "id": user_id,
             "name": data.get("name"),
-            "email": data.get("email", ""),
+            "email": email,
             "avatar_url": data.get("avatar_url")
         }
         if data.get("phone"):
             payload["phone"] = data.get("phone")
+            
+        if email:
+            existing_by_email = client.table("users").select("*").eq("email", email).maybe_single().execute()
+            if existing_by_email and hasattr(existing_by_email, 'data') and existing_by_email.data:
+                if existing_by_email.data.get("id") != user_id:
+                    return existing_by_email.data
             
         res_existing = client.table("users").select("role").eq("id", user_id).maybe_single().execute()
         if not res_existing or not hasattr(res_existing, 'data') or not res_existing.data:
