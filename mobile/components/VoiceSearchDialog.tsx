@@ -8,17 +8,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, {
-  cancelAnimation,
-  Easing,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -32,70 +21,13 @@ import {
 import { useVoiceSearchStore } from '../store/voiceSearchStore';
 import { voiceService, VoiceSearchResult } from '../services/voice.service';
 import { Product } from '../types';
-import { colors, fonts, fontSize, radius, spacing } from '../theme';
+import { colors, fonts, fontSize, radius, shadows, spacing } from '../theme';
 
 type Phase = 'idle' | 'requesting' | 'listening' | 'processing' | 'results' | 'error';
 
 const MAX_RECORDING_MS = 15000;
-const GEMINI_COLORS = ['#4285F4', '#9B72CB', '#D96570', '#34A853'];
 
-function PulseRing({ color, delay, active }: { color: string; delay: number; active: boolean }) {
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    if (active) {
-      progress.value = 0;
-      progress.value = withDelay(
-        delay,
-        withRepeat(withTiming(1, { duration: 2400, easing: Easing.out(Easing.ease) }), -1, false)
-      );
-    } else {
-      cancelAnimation(progress);
-      progress.value = withTiming(0, { duration: 200 });
-    }
-  }, [active, delay, progress]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(progress.value, [0, 1], [0.6, 2.2]) }],
-    opacity: interpolate(progress.value, [0, 1], [0.5, 0]),
-  }));
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[styles.pulseRing, { borderColor: color }, animatedStyle]}
-    />
-  );
-}
-
-function WaveBar({ color, delay, active }: { color: string; delay: number; active: boolean }) {
-  const bar = useSharedValue(0.3);
-
-  useEffect(() => {
-    if (active) {
-      bar.value = withDelay(
-        delay,
-        withRepeat(
-          withSequence(
-            withTiming(1, { duration: 320, easing: Easing.inOut(Easing.ease) }),
-            withTiming(0.3, { duration: 320, easing: Easing.inOut(Easing.ease) })
-          ),
-          -1,
-          true
-        )
-      );
-    } else {
-      cancelAnimation(bar);
-      bar.value = withTiming(0.3, { duration: 200 });
-    }
-  }, [active, delay, bar]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleY: interpolate(bar.value, [0, 1], [0.35, 1]) }],
-  }));
-
-  return <Animated.View style={[styles.waveBar, { backgroundColor: color }, animatedStyle]} />;
-}
+const LISTEN_GIF = require('../assets/gif/output-onlinegiftools.gif');
 
 function ProductRow({ product, onPress }: { product: Product; onPress: () => void }) {
   return (
@@ -134,7 +66,7 @@ function statusSubtitle(phase: Phase, durationMillis: number, error: string): st
     return `Speak in any language — tap Done when you finish · ${Math.round((durationMillis || 0) / 1000)}s`;
   }
   if (phase === 'requesting') return 'Grant microphone access to search by voice.';
-  if (phase === 'processing') return 'Transcribing and understanding your request…';
+  if (phase === 'processing') return 'Optimising your words, then searching…';
   if (phase === 'results') return 'Tap a product to open it.';
   return 'Tap the mic and describe what you need.';
 }
@@ -245,6 +177,7 @@ export default function VoiceSearchDialog() {
 
   const isListening = phase === 'listening';
   const isBusy = phase === 'requesting' || phase === 'processing';
+  const showGif = !isBusy || isListening;
 
   return (
     <Modal
@@ -271,42 +204,18 @@ export default function VoiceSearchDialog() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.orbWrap}>
-            {!isBusy && phase !== 'results' && phase !== 'error' ? (
-              <>
-                {GEMINI_COLORS.map((color, index) => (
-                  <PulseRing key={color} color={color} delay={index * 400} active={isListening} />
-                ))}
-              </>
-            ) : null}
-            <View style={[styles.orbCore, isListening && styles.orbCoreActive]}>
-              <MaterialCommunityIcons
-                name={isListening ? 'microphone' : isBusy ? 'creation' : 'magnify'}
-                size={38}
-                color="#FFFFFF"
-              />
-            </View>
+          <View style={styles.mediaWrap}>
+            {showGif ? (
+              <Image source={LISTEN_GIF} style={styles.listenGif} contentFit="contain" />
+            ) : (
+              <ActivityIndicator color={colors.primary} size="large" />
+            )}
           </View>
-
-          {isListening ? (
-            <View style={styles.waveRow}>
-              {Array.from({ length: 9 }).map((_, index) => (
-                <WaveBar
-                  key={index}
-                  active
-                  color={GEMINI_COLORS[index % GEMINI_COLORS.length]}
-                  delay={index * 80}
-                />
-              ))}
-            </View>
-          ) : null}
 
           <Text style={styles.statusTitle}>{statusTitle(phase)}</Text>
           <Text style={styles.statusSubtitle}>
             {statusSubtitle(phase, recorderState.durationMillis, errorMsg)}
           </Text>
-
-          {isBusy ? <ActivityIndicator color={colors.primary} style={styles.spinner} /> : null}
 
           {result?.transcript ? (
             <View style={styles.transcriptBox}>
@@ -350,7 +259,7 @@ export default function VoiceSearchDialog() {
                 onPress={() => void stopAndSearch()}
                 activeOpacity={0.85}
               >
-                <MaterialCommunityIcons name="stop-circle-outline" size={20} color="#FFFFFF" />
+                <MaterialCommunityIcons name="check-circle-outline" size={20} color="#FFFFFF" />
                 <Text style={styles.primaryButtonText}>Done</Text>
               </TouchableOpacity>
             ) : isBusy ? null : (
@@ -372,22 +281,23 @@ export default function VoiceSearchDialog() {
   );
 }
 
-const ORB_SIZE = 132;
+const GIF_SIZE = 168;
 
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(8, 14, 22, 0.82)',
+    backgroundColor: colors.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#0E1726',
+    backgroundColor: colors.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingHorizontal: spacing['2xl'],
     paddingTop: spacing.xl,
     paddingBottom: spacing['4xl'],
     maxHeight: '92%',
+    ...shadows.lg,
   },
   headerRow: {
     flexDirection: 'row',
@@ -398,77 +308,44 @@ const styles = StyleSheet.create({
   brand: {
     fontFamily: fonts.heading,
     fontSize: fontSize.md,
-    color: '#EDF2F7',
+    color: colors.textPrimary,
     letterSpacing: 0.3,
   },
   closeButton: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  orbWrap: {
-    height: ORB_SIZE + 60,
+  mediaWrap: {
+    height: GIF_SIZE + 24,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.xl,
   },
-  pulseRing: {
-    position: 'absolute',
-    width: ORB_SIZE,
-    height: ORB_SIZE,
-    borderRadius: ORB_SIZE / 2,
-    borderWidth: 2,
-  },
-  orbCore: {
-    width: ORB_SIZE,
-    height: ORB_SIZE,
-    borderRadius: ORB_SIZE / 2,
-    backgroundColor: '#3B5BFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4285F4',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.65,
-    shadowRadius: 24,
-    elevation: 12,
-  },
-  orbCoreActive: {
-    backgroundColor: '#5B6CFF',
-  },
-  waveRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 34,
-    marginTop: spacing.md,
-  },
-  waveBar: {
-    width: 5,
-    height: 34,
-    borderRadius: 3,
+  listenGif: {
+    width: GIF_SIZE,
+    height: GIF_SIZE,
   },
   statusTitle: {
     fontFamily: fonts.heading,
     fontSize: fontSize.xl,
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     textAlign: 'center',
     marginTop: spacing.xl,
   },
   statusSubtitle: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: 'rgba(237, 242, 247, 0.66)',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
     lineHeight: 20,
   },
-  spinner: { marginTop: spacing.lg },
   transcriptBox: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.primarySoft,
     borderRadius: radius.lg,
     padding: spacing.lg,
     marginTop: spacing.xl,
@@ -476,7 +353,7 @@ const styles = StyleSheet.create({
   transcriptLabel: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.xs,
-    color: 'rgba(237,242,247,0.5)',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: spacing.xs,
@@ -484,13 +361,13 @@ const styles = StyleSheet.create({
   transcriptText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.md,
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     lineHeight: 22,
   },
   transcriptQuery: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: '#7FA8FF',
+    color: colors.primary,
     marginTop: spacing.sm,
   },
   results: { marginTop: spacing.lg, maxHeight: 320 },
@@ -498,7 +375,9 @@ const styles = StyleSheet.create({
   productRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: radius.lg,
     padding: spacing.md,
     gap: spacing.md,
@@ -507,31 +386,31 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: radius.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: colors.surfaceAlt,
   },
   productInfo: { flex: 1 },
   productTitle: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,
-    color: '#FFFFFF',
+    color: colors.textPrimary,
     lineHeight: 18,
   },
   productCategory: {
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
-    color: 'rgba(237,242,247,0.5)',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   productPrice: {
     fontFamily: fonts.heading,
     fontSize: fontSize.sm,
-    color: '#4ADE80',
+    color: colors.primary,
     marginTop: 2,
   },
   emptyText: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
-    color: 'rgba(237,242,247,0.7)',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xl,
   },
