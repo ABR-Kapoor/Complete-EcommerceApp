@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ordersService } from '../../services/orders.service';
@@ -86,9 +88,11 @@ function OrderCard({ order }: { order: Order }) {
 
 export default function OrdersScreen() {
   const { user } = useUser();
+  const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'processing' | 'shipped' | 'delivered'>('all');
 
   const loadOrders = useCallback(async () => {
     if (!user?.id) return;
@@ -106,6 +110,13 @@ export default function OrdersScreen() {
     loadOrders();
   }, [loadOrders]);
 
+  const filteredOrders = orders.filter((o) => {
+    if (filter === 'processing') return o.status === 'processing' || o.status === 'confirmed' || o.status === 'pending_payment';
+    if (filter === 'shipped') return o.status === 'shipped' || o.status === 'out_for_delivery';
+    if (filter === 'delivered') return o.status === 'delivered';
+    return true;
+  });
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -115,39 +126,106 @@ export default function OrdersScreen() {
   }
 
   return (
-    <FlatList
-      data={orders}
-      keyExtractor={(item) => item.id.toString()}
-      renderItem={({ item }) => <OrderCard order={item} />}
-      contentContainerStyle={styles.listContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => { setRefreshing(true); loadOrders(); }}
-          colors={[colors.primary]}
-        />
-      }
-      ListEmptyComponent={
-        <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="package-variant" size={56} color={colors.textTertiary} />
-          <Text style={styles.emptyTitle}>No orders yet</Text>
-          <Text style={styles.emptySubtext}>Explore AuraMart and place your first order</Text>
-        </View>
-      }
-    />
+    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+      {/* Filter Chips Bar */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterBar}
+      >
+        <TouchableOpacity
+          style={[styles.filterPill, filter === 'all' && styles.filterPillActive]}
+          onPress={() => setFilter('all')}
+        >
+          <Text style={[styles.filterPillText, filter === 'all' && styles.filterPillTextActive]}>All ({orders.length})</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterPill, filter === 'processing' && styles.filterPillActive]}
+          onPress={() => setFilter('processing')}
+        >
+          <Text style={[styles.filterPillText, filter === 'processing' && styles.filterPillTextActive]}>Processing</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterPill, filter === 'shipped' && styles.filterPillActive]}
+          onPress={() => setFilter('shipped')}
+        >
+          <Text style={[styles.filterPillText, filter === 'shipped' && styles.filterPillTextActive]}>Shipped</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterPill, filter === 'delivered' && styles.filterPillActive]}
+          onPress={() => setFilter('delivered')}
+        >
+          <Text style={[styles.filterPillText, filter === 'delivered' && styles.filterPillTextActive]}>Delivered</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      <FlatList
+        data={filteredOrders}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => <OrderCard order={item} />}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); loadOrders(); }}
+            colors={[colors.primary]}
+          />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons name="package-variant" size={56} color={colors.textTertiary} />
+            <Text style={styles.emptyTitle}>No orders found</Text>
+            <Text style={styles.emptySubtext}>Explore AuraMart and place your order</Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  filterBar: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  filterPill: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterPillText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  filterPillTextActive: {
+    fontFamily: fonts.bodyBold,
+    color: colors.surface,
+  },
   listContent: { padding: spacing['2xl'], paddingBottom: 130 },
   orderCard: {
     backgroundColor: colors.surface,
-    borderRadius: 24,
-    padding: spacing.xl,
+    borderRadius: 20,
+    padding: spacing.lg,
     marginBottom: spacing.md,
-    ...shadows.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   orderHeader: {
     flexDirection: 'row',

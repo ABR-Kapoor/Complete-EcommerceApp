@@ -1,27 +1,27 @@
 export const colors = {
-  primary: '#11A559',
-  primaryLight: '#22C55E',
-  primaryDark: '#15803D',
-  primarySoft: '#F0FDF4',
+  primary: '#176B50', // Primary emerald
+  primaryLight: '#238C6B',
+  primaryDark: '#124638', // Deep forest
+  primarySoft: '#E8F3EC', // Soft mint
 
-  secondary: '#1B3A4B',
-  secondaryLight: '#264F65',
+  secondary: '#124638',
+  secondaryLight: '#9DB8A5', // Sage
 
   accent: '#F0A500',
   accentSoft: '#FFF8E7',
   accentDark: '#C68800',
 
   surface: '#FFFFFF',
-  surfaceAlt: '#F7FAF9',
-  background: '#F2F6F5',
+  surfaceAlt: '#F8FAF7', // Warm background / surface
+  background: '#F8FAF7',
 
-  textPrimary: '#1A2B2E',
-  textSecondary: '#5C7A7E',
-  textTertiary: '#94A8AB',
+  textPrimary: '#1C3028', // Main text
+  textSecondary: '#68776F', // Secondary text
+  textTertiary: '#9DB8A5',
   textInverse: '#FFFFFF',
 
-  success: '#2E7D32',
-  successSoft: '#E8F5E9',
+  success: '#176B50',
+  successSoft: '#E8F3EC',
   warning: '#ED6C02',
   warningSoft: '#FFF3E0',
   error: '#D32F2F',
@@ -29,16 +29,16 @@ export const colors = {
   info: '#0288D1',
   infoSoft: '#E1F5FE',
 
-  border: '#E0EAE8',
-  borderActive: '#0A6B5C',
-  divider: '#EEF2F1',
+  border: '#E3EAE4', // Border token
+  borderActive: '#176B50',
+  divider: '#E3EAE4',
 
   skeleton: '#E8EDEC',
-  skeletonHighlight: '#F2F6F5',
+  skeletonHighlight: '#F8FAF7',
 
-  overlay: 'rgba(26, 43, 46, 0.5)',
-  shadow: 'rgba(17, 165, 89, 0.08)',
-  shadowDark: 'rgba(17, 165, 89, 0.16)',
+  overlay: 'rgba(28, 48, 40, 0.5)',
+  shadow: 'rgba(23, 107, 80, 0.08)',
+  shadowDark: 'rgba(23, 107, 80, 0.16)',
 };
 
 export const fonts = {

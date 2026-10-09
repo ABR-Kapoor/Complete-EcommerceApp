@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { useRouter, Stack } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../../store/cartStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { CartItem } from '../../types';
@@ -81,10 +82,13 @@ function CartItemCard({ item }: { item: CartItem }) {
 export default function CartScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 12);
   const items = useCartStore((s) => s.items);
   const loading = useCartStore((s) => s.loading);
   const subtotal = useCartStore((s) => s.subtotal());
   const totalItems = useCartStore((s) => s.totalItems());
+  const clearLocal = useCartStore((s) => s.clearLocal);
 
   if (loading) {
     return (
@@ -97,7 +101,99 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ title: `Cart (${totalItems})` }} />
+      <Stack.Screen
+        options={{
+          headerTitle: 'AuraMart',
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: fonts.headingBold, fontSize: fontSize.xl, color: colors.primary },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}
+              style={{
+                marginLeft: spacing.md,
+                width: 38,
+                height: 38,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: colors.surfaceAlt,
+                borderRadius: radius.full,
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity onPress={() => router.push('/(tabs)/search')} style={{
+                marginRight: spacing.md,
+                width: 38,
+                height: 38,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: colors.surfaceAlt,
+                borderRadius: radius.full,
+              }}>
+              <MaterialCommunityIcons name="magnify" size={20} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+
+      {/* Stepper Progress Bar */}
+      <View style={[styles.stepperContainer, { paddingTop: insets.top + 60 }]}>
+        <View style={styles.stepItem}>
+          <View style={[styles.stepCircle, styles.stepCircleActive]}>
+            <MaterialCommunityIcons name="cart-outline" size={14} color={colors.surface} />
+          </View>
+          <Text style={[styles.stepLabel, styles.stepLabelActive]}>Cart</Text>
+        </View>
+
+        <View style={styles.stepLine} />
+
+        <View style={styles.stepItem}>
+          <View style={styles.stepCircle}>
+            <Text style={styles.stepNumber}>2</Text>
+          </View>
+          <Text style={styles.stepLabel}>Checkout</Text>
+        </View>
+
+        <View style={styles.stepLine} />
+
+        <View style={styles.stepItem}>
+          <View style={styles.stepCircle}>
+            <Text style={styles.stepNumber}>3</Text>
+          </View>
+          <Text style={styles.stepLabel}>Payment</Text>
+        </View>
+
+        <View style={styles.stepLine} />
+
+        <View style={styles.stepItem}>
+          <View style={styles.stepCircle}>
+            <Text style={styles.stepNumber}>4</Text>
+          </View>
+          <Text style={styles.stepLabel}>Confirmation</Text>
+        </View>
+      </View>
+
+      {/* Cart Subheader */}
+      {items.length > 0 && (
+        <View style={styles.cartSubheader}>
+          <Text style={styles.cartSubheaderTitle}>
+            Your Cart <Text style={{ color: colors.textSecondary, fontFamily: fonts.body }}>({totalItems} items)</Text>
+          </Text>
+          <TouchableOpacity onPress={() => user && clearLocal()}>
+            <Text style={styles.clearCartText}>Clear Cart</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <FlatList
         data={items}
@@ -121,21 +217,34 @@ export default function CartScreen() {
         }
       />
 
-      {/* Summary & Checkout */}
+      {/* Sticky Bottom Bar */}
       {items.length > 0 && (
         <View style={styles.summaryBar}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal ({totalItems} items)</Text>
-            <Text style={styles.summaryValue}>₹{subtotal.toLocaleString()}</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.continueShoppingBtn}
+            onPress={() => router.replace('/(tabs)')}
+          >
+            <Text style={styles.continueShoppingText}>Continue Shopping</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.checkoutButton}
             onPress={() => router.push('/checkout/address')}
-            activeOpacity={0.85}
+            activeOpacity={0.88}
           >
             <Text style={styles.checkoutText}>Proceed to Checkout</Text>
-            <MaterialCommunityIcons name="arrow-right" size={20} color={colors.textInverse} />
           </TouchableOpacity>
+
+          {/* Razorpay Trust Badge */}
+          <View style={styles.trustBadgeRow}>
+            <MaterialCommunityIcons name="shield-check" size={14} color={colors.primary} />
+            <Text style={styles.trustBadgeText}>Secured by </Text>
+            <Text style={[styles.trustBadgeText, { fontFamily: fonts.headingBold, color: colors.textPrimary }]}>Razorpay</Text>
+            <View style={{ flexDirection: 'row', gap: 6, marginLeft: 8 }}>
+              <MaterialCommunityIcons name="credit-card-outline" size={16} color={colors.textSecondary} />
+              <MaterialCommunityIcons name="bank" size={16} color={colors.textSecondary} />
+            </View>
+          </View>
         </View>
       )}
     </View>
@@ -145,25 +254,92 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
-  listContent: { padding: spacing['2xl'], paddingBottom: spacing['6xl'] },
+  stepperContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing['2xl'],
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  stepItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  stepCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepCircleActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  stepNumber: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    color: colors.textSecondary,
+  },
+  stepLabel: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  stepLabelActive: {
+    fontFamily: fonts.bodySemiBold,
+    color: colors.primary,
+  },
+  stepLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: 4,
+  },
+  cartSubheader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  cartSubheaderTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.textPrimary,
+  },
+  clearCartText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.error,
+  },
+  listContent: { paddingHorizontal: spacing['2xl'], paddingBottom: 140 },
   cartItem: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    borderRadius: 16,
+    padding: spacing.md,
     marginBottom: spacing.md,
+    alignItems: 'center',
     ...shadows.sm,
   },
   itemImage: {
-    width: 88,
-    height: 88,
+    width: 68,
+    height: 68,
     borderRadius: radius.md,
-    backgroundColor: colors.skeleton,
+    backgroundColor: colors.surfaceAlt,
   },
   itemDetails: {
     flex: 1,
-    marginLeft: spacing.lg,
-    justifyContent: 'space-between',
+    marginLeft: spacing.md,
   },
   itemTitle: {
     fontFamily: fonts.bodyMedium,
@@ -181,33 +357,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-  },
-  qtyButton: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.sm,
+    gap: spacing.sm,
     backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.full,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  qtyButton: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
   qtyText: {
     fontFamily: fonts.heading,
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.textPrimary,
-    minWidth: 20,
+    minWidth: 16,
     textAlign: 'center',
   },
   emptyState: {
     alignItems: 'center',
-    paddingTop: spacing['6xl'],
+    paddingTop: spacing['5xl'],
   },
   emptyTitle: {
     fontFamily: fonts.heading,
@@ -223,7 +402,7 @@ const styles = StyleSheet.create({
   },
   exploreCTA: {
     backgroundColor: colors.primary,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     paddingHorizontal: spacing['2xl'],
     paddingVertical: spacing.md,
     marginTop: spacing['2xl'],
@@ -234,40 +413,49 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
   },
   summaryBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: colors.surface,
-    padding: spacing['2xl'],
+    paddingHorizontal: spacing['2xl'],
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    alignItems: 'center',
+    gap: spacing.sm,
     ...shadows.lg,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+  continueShoppingBtn: {
+    paddingVertical: 4,
   },
-  summaryLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.md,
+  continueShoppingText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
-  },
-  summaryValue: {
-    fontFamily: fonts.headingBold,
-    fontSize: fontSize.xl,
-    color: colors.primary,
   },
   checkoutButton: {
     backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    height: 52,
-    flexDirection: 'row',
+    borderRadius: radius.full,
+    height: 50,
+    width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.sm,
   },
   checkoutText: {
     fontFamily: fonts.heading,
     fontSize: fontSize.md,
     color: colors.textInverse,
+  },
+  trustBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  trustBadgeText: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: colors.textSecondary,
   },
 });

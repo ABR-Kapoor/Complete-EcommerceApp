@@ -1,1 +1,1 @@
-from . import products, cart, wishlist, reviews, users, orders, admin
+from . import products, cart, wishlist, reviews, users, orders, admin, search

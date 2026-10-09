@@ -21,13 +21,13 @@ export default function CheckoutSuccessScreen() {
           Thank you for shopping with AuraMart. Your order has been placed and is being processed.
         </Text>
 
-        {orderId && (
+        {!!orderId && (
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Order ID:</Text>
               <Text style={styles.infoValue}>#{orderId}</Text>
             </View>
-            {total && (
+            {!!total && (
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Total Amount:</Text>
                 <Text style={styles.infoValue}>₹{Number(total).toLocaleString()}</Text>

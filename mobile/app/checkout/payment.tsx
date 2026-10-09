@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ordersService } from '../../services/orders.service';
@@ -19,6 +20,7 @@ import { CreateOrderPayload } from '../../types';
 
 export default function CheckoutPaymentScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useUser();
   const { items: cartItems, subtotal, clearLocal } = useCartStore();
   const { address } = useUserStore();
@@ -79,13 +81,37 @@ export default function CheckoutPaymentScreen() {
         options={{
           headerShown: true,
           title: 'Step 3: Payment',
-          headerStyle: { backgroundColor: colors.surface },
+          headerTransparent: true,
+          headerShadowVisible: false,
           headerTintColor: colors.textPrimary,
           headerTitleStyle: { fontFamily: fonts.heading, fontSize: fontSize.lg },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}
+              style={{
+                marginLeft: spacing.md,
+                width: 38,
+                height: 38,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: colors.surfaceAlt,
+                borderRadius: radius.full,
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ),
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 60 }]} showsVerticalScrollIndicator={false}>
         <View style={styles.stepIndicator}>
           <Text style={styles.stepText}>Step 3 of 3</Text>
         </View>
@@ -161,7 +187,7 @@ export default function CheckoutPaymentScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing['2xl'] },
+  scrollContent: { padding: spacing['2xl'], paddingBottom: 60 },
   stepIndicator: { marginBottom: spacing.md },
   stepText: { fontFamily: fonts.bodyBold, fontSize: fontSize.xs, color: colors.primary },
   card: {

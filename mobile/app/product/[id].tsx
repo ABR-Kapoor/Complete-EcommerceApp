@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
@@ -40,6 +41,7 @@ function StarRating({ rating }: { rating: number }) {
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useUser();
 
   const addToCart = useCartStore((s) => s.addToCart);
@@ -130,129 +132,211 @@ export default function ProductDetailScreen() {
         options={{
           title: '',
           headerTransparent: true,
-          headerRight: () =>
-            user ? (
-              <TouchableOpacity
-                onPress={() => toggleWishlist(user.id, product.id)}
-                style={styles.headerIconButton}
-              >
-                <MaterialCommunityIcons
-                  name={isInWishlist ? 'heart' : 'heart-outline'}
-                  size={24}
-                  color={isInWishlist ? colors.error : colors.textPrimary}
-                />
+          headerShadowVisible: false,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}
+              style={[styles.headerIconButton, { marginLeft: spacing.md }]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <View style={{ flexDirection: 'row', gap: spacing.xs, marginRight: spacing.md }}>
+              <TouchableOpacity style={styles.headerIconButton}>
+                <MaterialCommunityIcons name="share-variant-outline" size={22} color={colors.textPrimary} />
               </TouchableOpacity>
-            ) : null,
+              {user && (
+                <TouchableOpacity
+                  onPress={() => toggleWishlist(user.id, product.id)}
+                  style={styles.headerIconButton}
+                >
+                  <MaterialCommunityIcons
+                    name={isInWishlist ? 'heart' : 'heart-outline'}
+                    size={22}
+                    color={isInWishlist ? colors.error : colors.textPrimary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          ),
         }}
       />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Product Image */}
-        <Image
-          source={{ uri: product.image_url }}
-          style={styles.productImage}
-          contentFit="cover"
-          transition={300}
-        />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110, paddingTop: insets.top + 60 }}>
+        {/* White Card Container for Hero Image */}
+        <View style={styles.imageCardContainer}>
+          <Image
+            source={{ uri: product.image_url }}
+            style={styles.productImage}
+            contentFit="contain"
+            transition={300}
+          />
+        </View>
 
-        {/* Sale badge */}
-        {product.is_sale && (
-          <View style={styles.saleBadge}>
-            <Text style={styles.saleBadgeText}>SALE</Text>
-          </View>
-        )}
-
-        {/* Product Info */}
+        {/* Product Details Section */}
         <View style={styles.infoSection}>
-          <Text style={styles.category}>{product.category}</Text>
           <Text style={styles.title}>{product.title}</Text>
+          <Text style={styles.packSizeSubtext}>Category: {product.category}</Text>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>₹{product.price.toLocaleString()}</Text>
-            {reviews.length > 0 && (
-              <View style={styles.ratingRow}>
-                <StarRating rating={avgRating} />
-                <Text style={styles.ratingText}>
-                  {avgRating.toFixed(1)} ({reviews.length})
+          {/* Rating */}
+          <View style={styles.ratingBadgeRow}>
+            {reviews.length > 0 ? (
+              <View style={styles.ratingBadge}>
+                <MaterialCommunityIcons name="star" size={14} color="#FFA800" />
+                <Text style={styles.ratingBadgeText}>
+                  {avgRating.toFixed(1)} ({reviews.length} review{reviews.length > 1 ? 's' : ''})
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.ratingBadge, { backgroundColor: colors.surfaceAlt }]}>
+                <MaterialCommunityIcons name="star-outline" size={14} color={colors.textTertiary} />
+                <Text style={[styles.ratingBadgeText, { color: colors.textSecondary }]}>
+                  No reviews yet
                 </Text>
               </View>
             )}
           </View>
 
-          {/* Stock */}
-          {product.stock !== undefined && (
-            <View style={styles.stockRow}>
-              <MaterialCommunityIcons
-                name={product.stock > 0 ? 'check-circle' : 'close-circle'}
-                size={16}
-                color={product.stock > 0 ? colors.success : colors.error}
-              />
-              <Text style={[styles.stockText, { color: product.stock > 0 ? colors.success : colors.error }]}>
-                {product.stock > 0
-                  ? product.stock <= 5
-                    ? `Only ${product.stock} left`
-                    : 'In Stock'
-                  : 'Out of Stock'}
-              </Text>
+          {/* Price & Stock Row */}
+          <View style={styles.priceRow}>
+            <View style={styles.priceGroup}>
+              <Text style={styles.price}>₹{product.price.toLocaleString()}</Text>
+              <Text style={styles.originalPrice}>₹{Math.round(product.price * 1.15)}</Text>
+              <View style={styles.discountBadge}>
+                <Text style={styles.discountText}>10% OFF</Text>
+              </View>
             </View>
-          )}
 
-          {/* Description */}
-          {product.description && (
-            <TouchableOpacity onPress={() => setDescExpanded(!descExpanded)} activeOpacity={0.85}>
-              <Text style={styles.descriptionLabel}>Description</Text>
-              <Text
-                style={styles.description}
-                numberOfLines={descExpanded ? undefined : 3}
-              >
-                {product.description}
-              </Text>
-              <Text style={styles.readMore}>
-                {descExpanded ? 'Show less' : 'Read more'}
-              </Text>
-            </TouchableOpacity>
-          )}
+            <View style={styles.inStockPill}>
+              <MaterialCommunityIcons name="check-circle" size={14} color={colors.primary} />
+              <Text style={styles.inStockText}>In Stock</Text>
+            </View>
+          </View>
 
-          {/* Quantity */}
-          <View style={styles.quantitySection}>
-            <Text style={styles.quantityLabel}>Quantity</Text>
-            <View style={styles.quantityControls}>
+          {/* Quantity & Quick Add Row */}
+          <View style={styles.purchaseControlsRow}>
+            <View style={styles.quantityPill}>
               <TouchableOpacity
-                style={styles.quantityButton}
+                style={styles.qtyBtn}
                 onPress={() => setQuantity(Math.max(1, quantity - 1))}
               >
                 <MaterialCommunityIcons name="minus" size={18} color={colors.textPrimary} />
               </TouchableOpacity>
-              <Text style={styles.quantityValue}>{quantity}</Text>
+              <Text style={styles.qtyNumber}>{quantity}</Text>
               <TouchableOpacity
-                style={styles.quantityButton}
+                style={styles.qtyBtn}
                 onPress={() => setQuantity(quantity + 1)}
               >
                 <MaterialCommunityIcons name="plus" size={18} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={styles.mainAddToCartBtn}
+              onPress={handleAddToCart}
+              disabled={adding}
+              activeOpacity={0.88}
+            >
+              {adding ? (
+                <ActivityIndicator color={colors.surface} />
+              ) : (
+                <Text style={styles.mainAddToCartText}>Add to Cart</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Reviews */}
-        {reviews.length > 0 && (
-          <View style={styles.reviewsSection}>
-            <Text style={styles.reviewsTitle}>Reviews ({reviews.length})</Text>
-            {reviews.slice(0, 3).map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewerName}>
-                    {review.users?.name || 'Customer'}
-                  </Text>
-                  <StarRating rating={review.rating} />
-                </View>
-                <Text style={styles.reviewText}>{review.text}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {/* Info Nav Tab Bar */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.navTabsContainer}
+        >
+          <TouchableOpacity style={[styles.navTab, styles.navTabActive]}>
+            <Text style={[styles.navTabText, styles.navTabTextActive]}>Overview</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navTab}>
+            <Text style={styles.navTabText}>Specifications</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navTab}>
+            <Text style={styles.navTabText}>Directions</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navTab}>
+            <Text style={styles.navTabText}>Safety Information</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.navTab}>
+            <Text style={styles.navTabText}>Reviews ({reviews.length})</Text>
+          </TouchableOpacity>
+        </ScrollView>
 
-        {/* Related Products */}
+        {/* About this product Card */}
+        <View style={styles.aboutCard}>
+          <Text style={styles.aboutTitle}>About this product</Text>
+          <Text style={styles.aboutDescription}>
+            {product.description ||
+              'Relieves mild to moderate pain and reduces fever. Suitable for adults and children as directed.'}
+          </Text>
+
+          <View style={styles.specGrid}>
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="flask-outline" size={20} color={colors.primary} />
+              <View style={styles.specContent}>
+                <Text style={styles.specLabel}>Composition</Text>
+                <Text style={styles.specValue}>Paracetamol 500mg</Text>
+              </View>
+            </View>
+
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="pill" size={20} color={colors.primary} />
+              <View style={styles.specContent}>
+                <Text style={styles.specLabel}>Dosage Form</Text>
+                <Text style={styles.specValue}>Tablet</Text>
+              </View>
+            </View>
+
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="package-variant-closed" size={20} color={colors.primary} />
+              <View style={styles.specContent}>
+                <Text style={styles.specLabel}>Pack Size</Text>
+                <Text style={styles.specValue}>Strip of 15 tablets</Text>
+              </View>
+            </View>
+
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="factory" size={20} color={colors.primary} />
+              <View style={styles.specContent}>
+                <Text style={styles.specLabel}>Manufacturer</Text>
+                <Text style={styles.specValue}>GSK Consumer Healthcare</Text>
+              </View>
+            </View>
+
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="thermometer" size={20} color={colors.primary} />
+              <View style={styles.specContent}>
+                <Text style={styles.specLabel}>Storage</Text>
+                <Text style={styles.specValue}>Store in a cool, dry place</Text>
+              </View>
+            </View>
+
+            <View style={styles.specItem}>
+              <MaterialCommunityIcons name="file-document-outline" size={20} color={colors.primary} />
+              <View style={styles.specContent}>
+                <Text style={styles.specLabel}>Prescription</Text>
+                <Text style={styles.specValue}>Not required</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Similar Products */}
         {relatedProducts.length > 0 && (
           <View style={styles.relatedSection}>
             <Text style={styles.relatedTitle}>Similar Products</Text>
@@ -263,7 +347,7 @@ export default function ProductDetailScreen() {
                   style={styles.relatedCard}
                   onPress={() => router.push(`/product/${rp.id}`)}
                 >
-                  <Image source={{ uri: rp.image_url }} style={styles.relatedImage} contentFit="cover" />
+                  <Image source={{ uri: rp.image_url }} style={styles.relatedImage} contentFit="contain" />
                   <Text style={styles.relatedName} numberOfLines={1}>{rp.title}</Text>
                   <Text style={styles.relatedPrice}>₹{rp.price.toLocaleString()}</Text>
                 </TouchableOpacity>
@@ -272,29 +356,6 @@ export default function ProductDetailScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Sticky CTA */}
-      <View style={styles.ctaBar}>
-        <TouchableOpacity
-          style={styles.addToCartButton}
-          onPress={handleAddToCart}
-          disabled={adding || (product.stock !== undefined && product.stock <= 0)}
-          activeOpacity={0.85}
-        >
-          <MaterialCommunityIcons name="cart-plus" size={20} color={colors.primary} />
-          <Text style={styles.addToCartText}>Add to Cart</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.buyNowButton, (product.stock !== undefined && product.stock <= 0) && styles.disabledButton]}
-          onPress={handleBuyNow}
-          disabled={adding || (product.stock !== undefined && product.stock <= 0)}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.buyNowText}>
-            {product.stock !== undefined && product.stock <= 0 ? 'Out of Stock' : 'Buy Now'}
-          </Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -304,58 +365,270 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   emptyText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.lg },
   headerIconButton: {
-    width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.85)', borderRadius: radius.full, marginRight: spacing.sm,
+    width: 38,
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.full,
   },
-  productImage: { width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.85, backgroundColor: colors.skeleton },
-  saleBadge: {
-    position: 'absolute', top: spacing['6xl'], left: spacing.lg,
-    backgroundColor: colors.accent, borderRadius: radius.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+  imageCardContainer: {
+    width: SCREEN_WIDTH - spacing['2xl'] * 2,
+    height: 240,
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    marginHorizontal: spacing['2xl'],
+    marginTop: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.md,
+    ...shadows.sm,
   },
-  saleBadgeText: { fontFamily: fonts.bodySemiBold, fontSize: fontSize.xs, color: colors.textPrimary, letterSpacing: 0.5 },
-  infoSection: { padding: spacing['2xl'], backgroundColor: colors.surface },
-  category: { fontFamily: fonts.bodyMedium, fontSize: fontSize.xs, color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.8 },
-  title: { fontFamily: fonts.headingBold, fontSize: fontSize.xl, color: colors.textPrimary, marginTop: spacing.sm, lineHeight: 28 },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.lg },
-  price: { fontFamily: fonts.headingBold, fontSize: fontSize['2xl'], color: colors.primary },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  ratingText: { fontFamily: fonts.body, fontSize: fontSize.xs, color: colors.textSecondary },
-  stockRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.md },
-  stockText: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm },
-  descriptionLabel: { fontFamily: fonts.heading, fontSize: fontSize.md, color: colors.textPrimary, marginTop: spacing['2xl'], marginBottom: spacing.sm },
-  description: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22 },
-  readMore: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.primary, marginTop: spacing.xs },
-  quantitySection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing['2xl'], paddingTop: spacing['2xl'], borderTopWidth: 1, borderTopColor: colors.divider },
-  quantityLabel: { fontFamily: fonts.heading, fontSize: fontSize.md, color: colors.textPrimary },
-  quantityControls: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  quantityButton: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', alignItems: 'center' },
-  quantityValue: { fontFamily: fonts.heading, fontSize: fontSize.lg, color: colors.textPrimary, minWidth: 24, textAlign: 'center' },
-  reviewsSection: { padding: spacing['2xl'], backgroundColor: colors.surface, marginTop: spacing.sm },
-  reviewsTitle: { fontFamily: fonts.heading, fontSize: fontSize.lg, color: colors.textPrimary, marginBottom: spacing.lg },
-  reviewCard: { backgroundColor: colors.surfaceAlt, borderRadius: radius.md, padding: spacing.lg, marginBottom: spacing.md },
-  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  reviewerName: { fontFamily: fonts.bodyMedium, fontSize: fontSize.sm, color: colors.textPrimary },
-  reviewText: { fontFamily: fonts.body, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 },
-  relatedSection: { padding: spacing['2xl'] },
-  relatedTitle: { fontFamily: fonts.heading, fontSize: fontSize.lg, color: colors.textPrimary, marginBottom: spacing.lg },
-  relatedCard: { width: 140, backgroundColor: colors.surface, borderRadius: radius.md, overflow: 'hidden', ...shadows.sm },
-  relatedImage: { width: 140, height: 140, backgroundColor: colors.skeleton },
-  relatedName: { fontFamily: fonts.bodyMedium, fontSize: fontSize.xs, color: colors.textPrimary, padding: spacing.sm, paddingBottom: 0 },
-  relatedPrice: { fontFamily: fonts.heading, fontSize: fontSize.sm, color: colors.primary, paddingHorizontal: spacing.sm, paddingBottom: spacing.sm },
-  ctaBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    flexDirection: 'row', padding: spacing.lg, gap: spacing.md,
-    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
-    ...shadows.lg,
+  productImage: {
+    width: '100%',
+    height: '100%',
   },
-  addToCartButton: {
-    flex: 1, flexDirection: 'row', height: 50, borderRadius: radius.md,
-    justifyContent: 'center', alignItems: 'center', gap: spacing.sm,
-    borderWidth: 1.5, borderColor: colors.primary,
+  infoSection: {
+    padding: spacing['2xl'],
+    backgroundColor: colors.surface,
+    marginTop: spacing.lg,
+    marginHorizontal: spacing['2xl'],
+    borderRadius: 24,
+    ...shadows.sm,
   },
-  addToCartText: { fontFamily: fonts.heading, fontSize: fontSize.md, color: colors.primary },
-  buyNowButton: { flex: 1, height: 50, borderRadius: radius.md, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary },
-  buyNowText: { fontFamily: fonts.heading, fontSize: fontSize.md, color: colors.textInverse },
-  disabledButton: { backgroundColor: colors.textTertiary },
+  title: {
+    fontFamily: fonts.headingBold,
+    fontSize: 22,
+    color: colors.textPrimary,
+    lineHeight: 28,
+  },
+  packSizeSubtext: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  brandSubtext: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  ratingBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFF8E7',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radius.sm,
+  },
+  ratingBadgeText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: '#9E6800',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.xl,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
+  },
+  priceGroup: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: spacing.sm,
+  },
+  price: {
+    fontFamily: fonts.headingBold,
+    fontSize: 26,
+    color: colors.primary,
+  },
+  originalPrice: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    textDecorationLine: 'line-through',
+  },
+  discountBadge: {
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  discountText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    color: colors.primary,
+  },
+  inStockPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primarySoft,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+  },
+  inStockText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+  },
+  purchaseControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.xl,
+  },
+  quantityPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceAlt,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 6,
+    height: 46,
+  },
+  qtyBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyNumber: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    paddingHorizontal: spacing.md,
+  },
+  mainAddToCartBtn: {
+    flex: 1,
+    height: 46,
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mainAddToCartText: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.md,
+    color: colors.surface,
+  },
+  navTabsContainer: {
+    paddingHorizontal: spacing['2xl'],
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  navTab: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  navTabActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  navTabText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  navTabTextActive: {
+    fontFamily: fonts.bodyBold,
+    color: colors.surface,
+  },
+  aboutCard: {
+    marginTop: spacing.lg,
+    marginHorizontal: spacing['2xl'],
+    padding: spacing['2xl'],
+    backgroundColor: colors.surface,
+    borderRadius: 24,
+    ...shadows.sm,
+  },
+  aboutTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  aboutDescription: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.xl,
+  },
+  specGrid: {
+    gap: spacing.md,
+  },
+  specItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  specContent: {
+    flex: 1,
+  },
+  specLabel: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  specValue: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+    marginTop: 1,
+  },
+  relatedSection: {
+    paddingHorizontal: spacing['2xl'],
+    marginTop: spacing['2xl'],
+  },
+  relatedTitle: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.lg,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
+  },
+  relatedCard: {
+    width: 140,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  relatedImage: {
+    width: 140,
+    height: 120,
+    backgroundColor: colors.surfaceAlt,
+  },
+  relatedName: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.textPrimary,
+    padding: spacing.sm,
+    paddingBottom: 0,
+  },
+  relatedPrice: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
 });

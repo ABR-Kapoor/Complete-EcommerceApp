@@ -6,6 +6,7 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   useFonts,
   Inter_400Regular,
@@ -19,6 +20,7 @@ import {
 import { useUserStore } from '../store/userStore';
 import { useCartStore } from '../store/cartStore';
 import { useWishlistStore } from '../store/wishlistStore';
+import VoiceSearchDialog from '../components/VoiceSearchDialog';
 import { colors } from '../theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -115,16 +117,19 @@ export default function RootLayout() {
   }
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <QueryClientProvider client={queryClient}>
-          <View style={styles.container} onLayout={onLayoutRootView}>
-            <StatusBar style="dark" />
-            <AuthGate />
-          </View>
-        </QueryClientProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <SafeAreaProvider>
+      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+        <ClerkLoaded>
+          <QueryClientProvider client={queryClient}>
+            <View style={styles.container} onLayout={onLayoutRootView}>
+              <StatusBar style="dark" />
+              <AuthGate />
+              <VoiceSearchDialog />
+            </View>
+          </QueryClientProvider>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </SafeAreaProvider>
   );
 }
 

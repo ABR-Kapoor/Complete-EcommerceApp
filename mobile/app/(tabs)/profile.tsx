@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
@@ -44,9 +45,11 @@ function ProfileMenuItem({
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { signOut } = useAuth();
   const { user } = useUser();
   const profile = useUserStore((s) => s.profile);
+  const wishlistCount = useWishlistStore((s) => s.productIds.length);
   const clearUser = useUserStore((s) => s.clearUser);
   const clearCart = useCartStore((s) => s.clearLocal);
   const clearWishlist = useWishlistStore((s) => s.clearLocal);
@@ -67,83 +70,96 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const displayName = profile?.name || user?.fullName || 'User';
-  const displayEmail = profile?.email || user?.primaryEmailAddress?.emailAddress || '';
+  const displayName = profile?.name || user?.firstName || 'Rohan';
   const avatarUrl = profile?.avatar_url || user?.imageUrl;
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.sm }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Profile Header */}
-      <View style={styles.profileHeader}>
+      <View style={styles.profileHeaderCard}>
         {avatarUrl ? (
           <Image source={{ uri: avatarUrl }} style={styles.avatar} contentFit="cover" transition={200} />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <MaterialCommunityIcons name="account" size={40} color={colors.textTertiary} />
+            <MaterialCommunityIcons name="account" size={36} color={colors.primary} />
           </View>
         )}
-        <Text style={styles.profileName}>{displayName}</Text>
-        <Text style={styles.profileEmail}>{displayEmail}</Text>
-        {profile?.phone && <Text style={styles.profilePhone}>{profile.phone}</Text>}
-      </View>
-
-      {/* Menu Sections */}
-      <View style={styles.menuSection}>
-        <Text style={styles.menuSectionTitle}>Shopping</Text>
-        <View style={styles.menuCard}>
-          <ProfileMenuItem
-            icon="package-variant-closed"
-            label="My Orders"
-            subtitle="Track and manage orders"
-            onPress={() => router.push('/(tabs)/orders')}
-          />
-          <View style={styles.menuDivider} />
-          <ProfileMenuItem
-            icon="heart-outline"
-            label="Wishlist"
-            subtitle="Your saved products"
-            onPress={() => router.push('/wishlist')}
-          />
-          <View style={styles.menuDivider} />
-          <ProfileMenuItem
-            icon="map-marker-outline"
-            label="Addresses"
-            subtitle="Manage delivery addresses"
-            onPress={() => router.push('/addresses')}
-          />
+        <View style={styles.headerTextGroup}>
+          <Text style={styles.greetingTitle}>Hello, {displayName} 👋</Text>
+          <Text style={styles.welcomeSubtext}>Welcome back!</Text>
         </View>
       </View>
 
-      <View style={styles.menuSection}>
-        <Text style={styles.menuSectionTitle}>Support</Text>
-        <View style={styles.menuCard}>
-          <ProfileMenuItem
-            icon="help-circle-outline"
-            label="Help & Support"
-            onPress={() => Alert.alert('Support', 'Contact us at support@auramart.com')}
-          />
-          <View style={styles.menuDivider} />
-          <ProfileMenuItem
-            icon="shield-lock-outline"
-            label="Privacy Policy"
-            onPress={() => Alert.alert('Privacy', 'Privacy policy will be available soon.')}
-          />
-        </View>
+      {/* Main Account Options List */}
+      <View style={styles.menuCard}>
+        <ProfileMenuItem
+          icon="package-variant-closed"
+          label="My Orders"
+          subtitle="Track, return or buy again"
+          onPress={() => router.push('/(tabs)/orders')}
+        />
+        <View style={styles.menuDivider} />
+
+        <ProfileMenuItem
+          icon="heart-outline"
+          label="Wishlist"
+          subtitle={`Saved items (${wishlistCount})`}
+          onPress={() => router.push('/wishlist')}
+        />
+        <View style={styles.menuDivider} />
+
+        <ProfileMenuItem
+          icon="map-marker-outline"
+          label="My Addresses"
+          subtitle="Manage delivery address"
+          onPress={() => router.push('/addresses')}
+        />
+        <View style={styles.menuDivider} />
+
+        <ProfileMenuItem
+          icon="account-cog-outline"
+          label="Profile Settings"
+          subtitle="Name, phone, avatar"
+          onPress={() => router.push('/profile/edit')}
+        />
+        <View style={styles.menuDivider} />
+
+        <ProfileMenuItem
+          icon="star-outline"
+          label="Reviews"
+          subtitle="Your product reviews"
+          onPress={() => Alert.alert('Reviews', 'Your reviews will appear here.')}
+        />
+        <View style={styles.menuDivider} />
+
+        <ProfileMenuItem
+          icon="credit-card-outline"
+          label="Payment History"
+          subtitle="View transactions"
+          onPress={() => Alert.alert('Payment History', 'No past transactions found.')}
+        />
+        <View style={styles.menuDivider} />
+
+        <ProfileMenuItem
+          icon="help-circle-outline"
+          label="Help & Support"
+          subtitle="Get assistance"
+          onPress={() => Alert.alert('Support', 'Contact us at support@auramart.com')}
+        />
       </View>
 
-      <View style={styles.menuSection}>
-        <View style={styles.menuCard}>
-          <ProfileMenuItem
-            icon="logout"
-            label="Sign Out"
-            onPress={handleSignOut}
-            color={colors.error}
-          />
-        </View>
+      {/* Sign Out Card */}
+      <View style={[styles.menuCard, { marginTop: spacing.lg }]}>
+        <ProfileMenuItem
+          icon="logout"
+          label="Sign Out"
+          onPress={handleSignOut}
+          color={colors.error}
+        />
       </View>
 
       {/* App info */}
@@ -157,72 +173,56 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingBottom: 130 },
-  profileHeader: {
+  scrollContent: { padding: spacing['2xl'], paddingBottom: 140 },
+  profileHeaderCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing['3xl'],
-    paddingHorizontal: spacing['2xl'],
+    padding: spacing.xl,
     backgroundColor: colors.surface,
-    borderBottomLeftRadius: 40,
-    borderBottomRightRadius: 40,
-    marginBottom: spacing.md,
-    ...shadows.md,
+    borderRadius: 24,
+    marginBottom: spacing.lg,
+    ...shadows.sm,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginBottom: spacing.lg,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: spacing.lg,
   },
   avatarPlaceholder: {
-    backgroundColor: colors.skeleton,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileName: {
+  headerTextGroup: {
+    flex: 1,
+  },
+  greetingTitle: {
     fontFamily: fonts.headingBold,
-    fontSize: fontSize.xl,
+    fontSize: 20,
     color: colors.textPrimary,
   },
-  profileEmail: {
+  welcomeSubtext: {
     fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  profilePhone: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
     marginTop: 2,
-  },
-  menuSection: {
-    paddingHorizontal: spacing['2xl'],
-    marginTop: spacing['2xl'],
-  },
-  menuSectionTitle: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.xs,
-    color: colors.textTertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
   },
   menuCard: {
     backgroundColor: colors.surface,
     borderRadius: 24,
     overflow: 'hidden',
-    ...shadows.md,
+    ...shadows.sm,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
   },
   menuIcon: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: radius.md,
     justifyContent: 'center',
     alignItems: 'center',
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuLabel: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.md,
     color: colors.textPrimary,
   },
@@ -240,19 +240,19 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: fontSize.xs,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: 1,
   },
   menuDivider: {
     height: 1,
     backgroundColor: colors.divider,
-    marginLeft: spacing.lg + 40 + spacing.md,
+    marginLeft: spacing.lg + 38 + spacing.md,
   },
   versionText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.xs,
     color: colors.textTertiary,
     textAlign: 'center',
-    marginTop: spacing['3xl'],
+    marginTop: spacing['2xl'],
   },
   versionSubtext: {
     fontFamily: fonts.body,

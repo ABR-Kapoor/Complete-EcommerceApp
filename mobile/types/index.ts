@@ -8,6 +8,8 @@ export interface Product {
   sold: boolean;
   is_sale: boolean;
   stock?: number;
+  avg_rating?: number | null;
+  review_count?: number;
   created_at?: string;
 }
 

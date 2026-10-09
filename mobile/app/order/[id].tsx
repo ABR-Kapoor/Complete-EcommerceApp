@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { ordersService } from '../../services/orders.service';
@@ -27,6 +28,7 @@ const STATUS_STAGES = [
 export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useUser();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -116,46 +118,76 @@ export default function OrderDetailScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: `Order #${order.id}`,
-          headerStyle: { backgroundColor: colors.surface },
+          title: 'AuraMart',
+          headerTransparent: true,
+          headerShadowVisible: false,
+          headerTitleStyle: { fontFamily: fonts.headingBold, fontSize: fontSize.xl, color: colors.primary },
           headerTintColor: colors.textPrimary,
-          headerTitleStyle: { fontFamily: fonts.heading, fontSize: fontSize.lg },
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)');
+                }
+              }}
+              style={{
+                marginLeft: spacing.md,
+                width: 38,
+                height: 38,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: colors.surfaceAlt,
+                borderRadius: radius.full,
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity style={{
+                marginRight: spacing.md,
+                width: 38,
+                height: 38,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: colors.surfaceAlt,
+                borderRadius: radius.full,
+              }}>
+              <MaterialCommunityIcons name="share-variant-outline" size={20} color={colors.textPrimary} />
+            </TouchableOpacity>
+          ),
         }}
       />
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Status Card & Timeline */}
-        <View style={styles.card}>
-          <View style={styles.statusHeader}>
-            <Text style={styles.sectionTitle}>Order Status</Text>
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: isCancelled
-                    ? colors.errorSoft
-                    : order.status === 'delivered'
-                    ? colors.primarySoft
-                    : colors.accentSoft,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.badgeText,
-                  {
-                    color: isCancelled
-                      ? colors.error
-                      : order.status === 'delivered'
-                      ? colors.primary
-                      : colors.accent,
-                  },
-                ]}
-              >
-                {order.status.replace('_', ' ').toUpperCase()}
-              </Text>
-            </View>
+      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 60 }]} showsVerticalScrollIndicator={false}>
+        {/* Back to orders shortcut */}
+        <TouchableOpacity
+          style={styles.backToOrdersRow}
+          onPress={() => router.push('/(tabs)/orders')}
+        >
+          <MaterialCommunityIcons name="chevron-left" size={20} color={colors.primary} />
+          <Text style={styles.backToOrdersText}>Back to Orders</Text>
+        </TouchableOpacity>
+
+        {/* Order Header Card */}
+        <View style={styles.orderHeaderCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.orderIdText}>Order #{order.id}</Text>
+            <Text style={styles.orderDateText}>
+              Placed on {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </Text>
           </View>
+          <View style={styles.statusPill}>
+            <Text style={styles.statusPillText}>{order.status.toUpperCase()}</Text>
+          </View>
+        </View>
+
+        {/* Vertical Timeline Card */}
+        <View style={styles.timelineCard}>
+          <Text style={styles.timelineCardTitle}>Order Tracking</Text>
 
           {isCancelled ? (
             <View style={styles.cancelledBox}>
@@ -163,31 +195,39 @@ export default function OrderDetailScreen() {
               <Text style={styles.cancelledText}>This order has been cancelled.</Text>
             </View>
           ) : (
-            <View style={styles.timeline}>
+            <View style={styles.verticalTimelineContainer}>
               {STATUS_STAGES.map((stage, index) => {
                 const isActive = index <= currentStageIdx;
+                const isCurrent = index === currentStageIdx;
+                const isLast = index === STATUS_STAGES.length - 1;
+
                 return (
-                  <View key={stage.key} style={styles.timelineStep}>
-                    <View
-                      style={[
-                        styles.timelineIcon,
-                        isActive && styles.timelineIconActive,
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name={stage.icon as any}
-                        size={18}
-                        color={isActive ? colors.surface : colors.textTertiary}
-                      />
+                  <View key={stage.key} style={styles.timelineRow}>
+                    <View style={styles.timelineLeftColumn}>
+                      <View style={[styles.nodeCircle, isActive && styles.nodeCircleActive]}>
+                        <MaterialCommunityIcons
+                          name={isActive ? "check" : "circle-outline"}
+                          size={14}
+                          color={isActive ? colors.surface : colors.textTertiary}
+                        />
+                      </View>
+                      {!isLast && <View style={[styles.verticalLine, isActive && styles.verticalLineActive]} />}
                     </View>
-                    <Text
-                      style={[
-                        styles.timelineLabel,
-                        isActive && styles.timelineLabelActive,
-                      ]}
-                    >
-                      {stage.label}
-                    </Text>
+
+                    <View style={styles.timelineContent}>
+                      <Text style={[styles.stageTitle, isCurrent && styles.stageTitleCurrent]}>
+                        {stage.label}
+                      </Text>
+                      {isActive && (
+                        <Text style={styles.stageSubtitle}>
+                          {stage.key === 'pending_payment' && 'Your order has been confirmed'}
+                          {stage.key === 'confirmed' && `Payment of ₹${order.total_price} received`}
+                          {stage.key === 'processing' && 'Your order is being prepared'}
+                          {stage.key === 'shipped' && 'Package handed over to delivery partner'}
+                          {stage.key === 'delivered' && 'Package delivered to address'}
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 );
               })}
@@ -195,15 +235,30 @@ export default function OrderDetailScreen() {
           )}
         </View>
 
-        {/* Order Items */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Ordered Items</Text>
+        {/* Delivery Address Card */}
+        <View style={styles.addressCard}>
+          <View style={styles.addressCardHeader}>
+            <Text style={styles.addressCardTitle}>Delivery Address</Text>
+            <TouchableOpacity>
+              <Text style={styles.changeAddressText}>Change</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.addressName}>{(order as any).name || 'Customer'}</Text>
+          <Text style={styles.addressSubtext}>
+            {order.address?.street ? `${order.address.street}, ${order.address.city}, ${order.address.state} - ${order.address.zip_code}` : 'Address details recorded on checkout'}
+          </Text>
+          <Text style={styles.addressPhone}>+91 {(order as any).phone || '9876543210'}</Text>
+        </View>
+
+        {/* Order Items List */}
+        <View style={styles.itemsCard}>
+          <Text style={styles.itemsCardTitle}>Order Items</Text>
           {(order.order_items || []).map((item) => (
             <View key={item.id} style={styles.itemRow}>
               <Image
                 source={{ uri: item.products?.image_url }}
                 style={styles.itemImage}
-                contentFit="cover"
+                contentFit="contain"
               />
               <View style={styles.itemDetails}>
                 <Text style={styles.itemTitle} numberOfLines={2}>
@@ -220,33 +275,7 @@ export default function OrderDetailScreen() {
           ))}
         </View>
 
-        {/* Payment & Price Breakdown */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Price Breakdown</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal</Text>
-            <Text style={styles.summaryValue}>₹{order.total_price.toLocaleString()}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Delivery Fee</Text>
-            <Text style={[styles.summaryValue, { color: colors.primary }]}>FREE</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Payment Method</Text>
-            <Text style={styles.summaryValue}>
-              {order.payment_method?.toUpperCase() || 'COD'}
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>Total Paid</Text>
-            <Text style={styles.totalValue}>₹{order.total_price.toLocaleString()}</Text>
-          </View>
-        </View>
-
-        {/* Cancel Button if applicable */}
+        {/* Cancel Action Button */}
         {canCancel && (
           <TouchableOpacity
             style={[styles.cancelBtn, cancelling && styles.btnDisabled]}
@@ -269,73 +298,169 @@ export default function OrderDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { padding: spacing['2xl'] },
-  card: {
+  scrollContent: { padding: spacing['2xl'], paddingBottom: 60 },
+  backToOrdersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  backToOrdersText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.primary,
+  },
+  orderHeaderCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing['2xl'],
-    marginBottom: spacing['2xl'],
+    padding: spacing.lg,
+    borderRadius: 20,
+    marginBottom: spacing.md,
     ...shadows.sm,
   },
-  sectionTitle: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.lg,
+  orderIdText: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
+  orderDateText: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  statusPill: {
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+  },
+  statusPillText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    color: '#ED6C02',
+  },
+  timelineCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.xl,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  timelineCardTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
     color: colors.textPrimary,
     marginBottom: spacing.lg,
   },
-  statusHeader: {
+  verticalTimelineContainer: {
+    paddingLeft: spacing.xs,
+  },
+  timelineRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  timelineLeftColumn: {
     alignItems: 'center',
+    width: 24,
+    marginRight: spacing.md,
   },
-  badge: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.xs,
-  },
-  badgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: fontSize.xs,
-  },
-  cancelledBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.errorSoft,
-    padding: spacing.md,
-    borderRadius: radius.sm,
-  },
-  cancelledText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
-    color: colors.error,
-  },
-  timeline: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  timelineStep: { alignItems: 'center', flex: 1 },
-  timelineIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    backgroundColor: colors.background,
+  nodeCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xs,
   },
-  timelineIconActive: { backgroundColor: colors.primary },
-  timelineLabel: {
+  nodeCircleActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  verticalLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.border,
+    marginVertical: 4,
+  },
+  verticalLineActive: {
+    backgroundColor: colors.primary,
+  },
+  timelineContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  stageTitle: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  stageTitleCurrent: {
+    fontFamily: fonts.headingBold,
+    color: colors.textPrimary,
+  },
+  stageSubtitle: {
     fontFamily: fonts.body,
-    fontSize: 10,
-    color: colors.textTertiary,
-    textAlign: 'center',
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
-  timelineLabelActive: {
-    fontFamily: fonts.bodyBold,
+  addressCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.xl,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  addressCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  addressCardTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
+  changeAddressText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
     color: colors.primary,
+  },
+  addressName: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+  },
+  addressSubtext: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  addressPhone: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 4,
+  },
+  itemsCard: {
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.xl,
+    marginBottom: spacing.md,
+    ...shadows.sm,
+  },
+  itemsCardTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    marginBottom: spacing.md,
   },
   itemRow: {
     flexDirection: 'row',
@@ -344,10 +469,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   itemImage: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: radius.sm,
-    backgroundColor: colors.skeleton,
+    backgroundColor: colors.surfaceAlt,
   },
   itemDetails: { flex: 1 },
   itemTitle: {
@@ -366,42 +491,26 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textPrimary,
   },
-  summaryRow: {
+  cancelledBox: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.errorSoft,
+    padding: spacing.md,
+    borderRadius: radius.sm,
   },
-  summaryLabel: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  summaryValue: {
+  cancelledText: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,
-    color: colors.textPrimary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.md,
-  },
-  totalLabel: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.md,
-    color: colors.textPrimary,
-  },
-  totalValue: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.lg,
-    color: colors.primary,
+    color: colors.error,
   },
   cancelBtn: {
     borderWidth: 1,
     borderColor: colors.error,
-    borderRadius: radius.md,
-    paddingVertical: spacing.lg,
+    borderRadius: radius.full,
+    paddingVertical: spacing.md,
     alignItems: 'center',
+    marginTop: spacing.md,
   },
   btnDisabled: { opacity: 0.6 },
   cancelBtnText: {
@@ -416,11 +525,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   backBtn: {
-    marginTop: spacing.lg,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.full,
+    marginTop: spacing.lg,
   },
   backBtnText: {
     fontFamily: fonts.heading,

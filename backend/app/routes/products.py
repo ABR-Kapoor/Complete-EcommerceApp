@@ -27,7 +27,7 @@ def get_most_bought():
 def get_products(category: str = None, min_price: float = None, max_price: float = None, search: str = None):
     try:
         client = get_supabase_client()
-        query = client.table("products").select("*")
+        query = client.table("products").select("*, reviews(rating)")
         
         if category:
             query = query.eq("category", category)
@@ -39,7 +39,19 @@ def get_products(category: str = None, min_price: float = None, max_price: float
             query = query.ilike("title", f"%{search}%")
         
         data = query.execute()
-        return data.data or []
+        raw_products = data.data or []
+
+        for p in raw_products:
+            revs = p.pop("reviews", []) or []
+            ratings = [r["rating"] for r in revs if isinstance(r, dict) and r.get("rating") is not None]
+            if ratings:
+                p["avg_rating"] = round(sum(ratings) / len(ratings), 1)
+                p["review_count"] = len(ratings)
+            else:
+                p["avg_rating"] = None
+                p["review_count"] = 0
+
+        return raw_products
     except Exception as e:
         print(f"Error fetching products: {e}")
         import traceback
@@ -50,8 +62,18 @@ def get_products(category: str = None, min_price: float = None, max_price: float
 def get_product(product_id: int):
     try:
         client = get_supabase_client()
-        data = client.table("products").select("*").eq("id", product_id).single().execute()
-        return data.data or {}
+        data = client.table("products").select("*, reviews(rating)").eq("id", product_id).single().execute()
+        prod = data.data or {}
+        if prod:
+            revs = prod.pop("reviews", []) or []
+            ratings = [r["rating"] for r in revs if isinstance(r, dict) and r.get("rating") is not None]
+            if ratings:
+                prod["avg_rating"] = round(sum(ratings) / len(ratings), 1)
+                prod["review_count"] = len(ratings)
+            else:
+                prod["avg_rating"] = None
+                prod["review_count"] = 0
+        return prod
     except Exception as e:
         print(f"Error fetching product {product_id}: {e}")
         return {}

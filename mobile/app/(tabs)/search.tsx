@@ -11,10 +11,11 @@ import {
   Keyboard,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
+import { useVoiceSearchStore } from '../../store/voiceSearchStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { Product } from '../../types';
 
@@ -25,6 +26,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
+  const openVoice = useVoiceSearchStore((s) => s.open);
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Product[]>([]);
@@ -65,6 +67,13 @@ export default function SearchScreen() {
     setTimeout(() => inputRef.current?.focus(), 300);
   }, []);
 
+  // Tapping the animated search (GIF) tab opens the Gemini-style listening dialog
+  useFocusEffect(
+    useCallback(() => {
+      openVoice();
+    }, [openVoice])
+  );
+
   const renderProduct = useCallback(
     ({ item }: { item: Product }) => (
       <TouchableOpacity
@@ -104,6 +113,13 @@ export default function SearchScreen() {
             autoCapitalize="none"
             autoCorrect={false}
           />
+          <TouchableOpacity
+            onPress={openVoice}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Search by voice"
+          >
+            <MaterialCommunityIcons name="microphone-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
           {query.length > 0 && (
             <TouchableOpacity
               onPress={() => {

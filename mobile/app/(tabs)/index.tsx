@@ -12,10 +12,12 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
 import { useWishlistStore } from '../../store/wishlistStore';
+import { useCartStore } from '../../store/cartStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { Product, Category } from '../../types';
 
@@ -44,7 +46,20 @@ function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
   const { user } = useUser();
   const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
+  const addToCart = useCartStore((s) => s.addToCart);
   const isInWishlist = useWishlistStore((s) => s.productIds.includes(product.id));
+
+  const handleQuickAdd = async () => {
+    if (!user?.id) {
+      router.push((`/product/${product.id}`) as any);
+      return;
+    }
+    try {
+      await addToCart(user.id, product.id, 1);
+    } catch {
+      // Handled in store
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -85,10 +100,26 @@ function ProductCard({ product }: { product: Product }) {
         <Text style={styles.productTitle} numberOfLines={2}>
           {product.title}
         </Text>
-        <Text style={styles.productPrice}>₹{product.price.toLocaleString()}</Text>
-        {product.stock !== undefined && product.stock <= 0 && (
-          <Text style={styles.outOfStock}>Out of stock</Text>
-        )}
+
+        <View style={styles.cardPriceRow}>
+          <Text style={styles.productPrice}>₹{product.price.toLocaleString()}</Text>
+          {product.avg_rating ? (
+            <View style={styles.ratingInline}>
+              <MaterialCommunityIcons name="star" size={12} color="#FFA800" />
+              <Text style={styles.ratingInlineText}>{product.avg_rating.toFixed(1)}</Text>
+            </View>
+          ) : (
+            <Text style={styles.noRatingText}>No reviews</Text>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.cardAddToCartBtn}
+          onPress={handleQuickAdd}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.cardAddToCartText}>Add to Cart</Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -98,16 +129,17 @@ function ProductCard({ product }: { product: Product }) {
 // Category chip
 // ──────────────────────────────────
 const CATEGORY_ICONS: Record<string, string> = {
+  'OTC Medicines': 'pill',
+  'Prescription Medicines': 'file-document-outline',
+  'First Aid': 'medical-bag',
+  'Personal Care': 'bottle-tonic-outline',
+  'Health Monitoring': 'heart-pulse',
+  'Baby Care': 'baby-bottle-outline',
+  'Healthcare Devices': 'stethoscope',
   Electronics: 'cellphone',
   Clothing: 'tshirt-crew',
   Home: 'home-outline',
   Books: 'book-open-variant',
-  Ayurveda: 'leaf',
-  Wellness: 'heart-pulse',
-  Medicines: 'pill',
-  'Healthcare Devices': 'medical-bag',
-  'Personal Care': 'face-woman-shimmer',
-  Nutrition: 'food-apple-outline',
 };
 
 function CategoryChip({ category, onPress }: { category: Category; onPress: () => void }) {
@@ -117,7 +149,7 @@ function CategoryChip({ category, onPress }: { category: Category; onPress: () =
       <View style={styles.categoryIconContainer}>
         <MaterialCommunityIcons name={iconName as any} size={24} color={colors.primary} />
       </View>
-      <Text style={styles.categoryChipText} numberOfLines={1}>
+      <Text style={styles.categoryChipText} numberOfLines={2}>
         {category.name}
       </Text>
     </TouchableOpacity>
@@ -146,12 +178,14 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useUser();
+  const insets = useSafeAreaInsets();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [saleProducts, setSaleProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'all' | 'best_seller' | 'sale'>('all');
 
   const loadData = useCallback(async () => {
     try {
@@ -185,7 +219,7 @@ export default function HomeScreen() {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Skeleton greeting */}
-        <View style={styles.greetingSection}>
+        <View style={{ paddingHorizontal: spacing['2xl'], marginVertical: spacing.md }}>
           <View style={{ width: 200, height: 24, backgroundColor: colors.skeleton, borderRadius: 6 }} />
           <View style={{ width: 160, height: 14, backgroundColor: colors.skeleton, borderRadius: 4, marginTop: 8 }} />
         </View>
@@ -205,10 +239,16 @@ export default function HomeScreen() {
     );
   }
 
+  const filteredProducts = products.filter((p) => {
+    if (activeTab === 'sale') return p.is_sale;
+    if (activeTab === 'best_seller') return p.sold;
+    return true;
+  });
+
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.xs }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -219,30 +259,56 @@ export default function HomeScreen() {
         />
       }
     >
-      {/* Greeting */}
-      <View style={styles.greetingSection}>
-        <Text style={styles.greetingText}>{greeting}</Text>
-        <Text style={styles.greetingSubtext}>Discover trusted healthcare products</Text>
-      </View>
-
-      {/* Search Bar (navigates to search tab) */}
-      <View style={{ zIndex: 1, marginTop: -32 }}>
+      {/* Search Bar */}
+      <View style={styles.searchBarWrapper}>
         <TouchableOpacity
           style={styles.searchBar}
           onPress={() => router.push('/(tabs)/search')}
           activeOpacity={0.85}
           accessibilityLabel="Search products"
         >
-          <MaterialCommunityIcons name="magnify" size={24} color={colors.primary} />
-          <Text style={styles.searchPlaceholder}>Search products...</Text>
+          <MaterialCommunityIcons name="magnify" size={22} color={colors.primary} />
+          <Text style={styles.searchPlaceholder}>Search medicines, healthcare products...</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Hero Banner */}
+      <View style={styles.heroBanner}>
+        <View style={styles.heroBadge}>
+          <MaterialCommunityIcons name="shield-check" size={14} color={colors.primary} />
+          <Text style={styles.heroBadgeText}>TRUSTED PHARMACY</Text>
+        </View>
+
+        <Text style={styles.heroTitle}>Healthcare essentials, made simpler.</Text>
+        <Text style={styles.heroSubtitle}>
+          Discover pharmacy essentials with clear information, transparent pricing & fast delivery.
+        </Text>
+
+        <View style={styles.heroCtaRow}>
+          <TouchableOpacity
+            style={styles.heroPrimaryBtn}
+            onPress={() => router.push('/(tabs)/categories')}
+            activeOpacity={0.88}
+          >
+            <Text style={styles.heroPrimaryBtnText}>Shop Products</Text>
+            <MaterialCommunityIcons name="arrow-right" size={16} color={colors.surface} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.heroSecondaryBtn}
+            onPress={() => router.push('/(tabs)/categories')}
+            activeOpacity={0.88}
+          >
+            <Text style={styles.heroSecondaryBtnText}>Explore Categories</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Categories */}
       {categories.length > 0 && (
         <>
           <SectionHeader
-            title="Categories"
+            title="Shop by Category"
             onSeeAll={() => router.push('/(tabs)/categories')}
           />
           <ScrollView
@@ -261,33 +327,40 @@ export default function HomeScreen() {
         </>
       )}
 
-      {/* Featured / Sale Products */}
-      {saleProducts.length > 0 && (
-        <>
-          <SectionHeader title="Featured Deals" />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalProductScroll}
-          >
-            {saleProducts.map((product) => (
-              <View key={product.id} style={{ width: CARD_WIDTH, marginRight: spacing.md }}>
-                <ProductCard product={product} />
-              </View>
-            ))}
-          </ScrollView>
-        </>
-      )}
+      {/* Filter Tabs & Products Grid */}
+      <SectionHeader title="Featured Products" />
 
-      {/* All Products */}
-      <SectionHeader title="All Products" />
+      {/* Filter Chips Bar */}
+      <View style={styles.filterChipsRow}>
+        <TouchableOpacity
+          style={[styles.filterChip, activeTab === 'all' && styles.filterChipActive]}
+          onPress={() => setActiveTab('all')}
+        >
+          <Text style={[styles.filterChipText, activeTab === 'all' && styles.filterChipTextActive]}>All Items</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterChip, activeTab === 'best_seller' && styles.filterChipActive]}
+          onPress={() => setActiveTab('best_seller')}
+        >
+          <Text style={[styles.filterChipText, activeTab === 'best_seller' && styles.filterChipTextActive]}>Best Sellers</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.filterChip, activeTab === 'sale' && styles.filterChipActive]}
+          onPress={() => setActiveTab('sale')}
+        >
+          <Text style={[styles.filterChipText, activeTab === 'sale' && styles.filterChipTextActive]}>On Sale</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.productGrid}>
-        {products.map((product) => (
+        {filteredProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </View>
 
-      {products.length === 0 && (
+      {filteredProducts.length === 0 && (
         <View style={styles.emptyState}>
           <MaterialCommunityIcons name="package-variant" size={48} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>No products available</Text>
@@ -298,108 +371,198 @@ export default function HomeScreen() {
       {/* Trust Section */}
       <View style={styles.trustSection}>
         <View style={styles.trustItem}>
-          <MaterialCommunityIcons name="shield-check-outline" size={20} color={colors.primary} />
-          <Text style={styles.trustText}>Authentic Products</Text>
+          <MaterialCommunityIcons name="shield-check-outline" size={22} color={colors.primary} />
+          <Text style={styles.trustItemTitle}>Genuine Products</Text>
+          <Text style={styles.trustItemSub}>Verified suppliers</Text>
         </View>
         <View style={styles.trustItem}>
-          <MaterialCommunityIcons name="lock-outline" size={20} color={colors.primary} />
-          <Text style={styles.trustText}>Secure Checkout</Text>
+          <MaterialCommunityIcons name="lock-check-outline" size={22} color={colors.primary} />
+          <Text style={styles.trustItemTitle}>Secure Payments</Text>
+          <Text style={styles.trustItemSub}>Razorpay / UPI</Text>
         </View>
         <View style={styles.trustItem}>
-          <MaterialCommunityIcons name="truck-delivery-outline" size={20} color={colors.primary} />
-          <Text style={styles.trustText}>Order Tracking</Text>
+          <MaterialCommunityIcons name="truck-delivery-outline" size={22} color={colors.primary} />
+          <Text style={styles.trustItemTitle}>Fast Delivery</Text>
+          <Text style={styles.trustItemSub}>Across India</Text>
         </View>
       </View>
 
-      <View style={{ height: spacing['3xl'] }} />
+      <View style={{ height: spacing['4xl'] }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingBottom: 130 },
-  greetingSection: {
-    paddingHorizontal: spacing['2xl'],
-    paddingTop: spacing.xl + 20,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.surface,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    marginBottom: spacing.xl,
-    ...shadows.sm,
-  },
-  greetingText: {
-    fontFamily: fonts.headingBold,
-    fontSize: fontSize['2xl'],
-    color: colors.textPrimary,
-    letterSpacing: -0.3,
-  },
-  greetingSubtext: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+  scrollContent: { paddingBottom: 140, paddingTop: spacing.xs },
+  searchBarWrapper: {
+    marginHorizontal: spacing['2xl'],
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.surface,
-    marginHorizontal: spacing['2xl'],
-    borderRadius: 28,
+    borderRadius: radius.full,
     paddingHorizontal: spacing.lg,
-    height: 56,
-    marginBottom: spacing['2xl'],
-    borderWidth: 0,
-    ...shadows.md,
+    height: 50,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   searchPlaceholder: {
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.textTertiary,
-    marginLeft: spacing.md,
+    marginLeft: spacing.sm,
+  },
+  heroBanner: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: 24,
+    marginHorizontal: spacing['2xl'],
+    marginBottom: spacing.xl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: '#D4E8DC',
+    ...shadows.sm,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surface,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    marginBottom: spacing.md,
+  },
+  heroBadgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    color: colors.primary,
+    letterSpacing: 0.5,
+  },
+  heroTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: 22,
+    color: colors.textPrimary,
+    lineHeight: 28,
+    marginBottom: spacing.xs,
+  },
+  heroSubtitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
+  heroCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  heroPrimaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 11,
+    borderRadius: radius.full,
+    gap: spacing.xs,
+  },
+  heroPrimaryBtnText: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.xs,
+    color: colors.surface,
+  },
+  heroSecondaryBtn: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 11,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  heroSecondaryBtnText: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.xs,
+    color: colors.textPrimary,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing['2xl'],
-    marginBottom: spacing.lg,
-    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
   },
   sectionTitle: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.headingBold,
     fontSize: fontSize.lg,
     color: colors.textPrimary,
   },
   seeAllText: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.sm,
     color: colors.primary,
   },
   categoryScrollContent: {
     paddingHorizontal: spacing['2xl'],
-    gap: spacing.md,
-    marginBottom: spacing['2xl'],
+    gap: spacing.lg,
+    marginBottom: spacing.xl,
   },
   categoryChip: {
     alignItems: 'center',
-    width: 76,
+    width: 82,
   },
   categoryIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    backgroundColor: colors.primarySoft,
+    width: 60,
+    height: 60,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
+    ...shadows.sm,
   },
   categoryChipText: {
     fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.xs,
+    fontSize: 11,
     color: colors.textPrimary,
     textAlign: 'center',
+    lineHeight: 14,
+  },
+  filterChipsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing['2xl'],
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  filterChip: {
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 7,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+  },
+  filterChipTextActive: {
+    fontFamily: fonts.bodyBold,
+    color: colors.surface,
   },
   horizontalProductScroll: {
     paddingHorizontal: spacing['2xl'],
@@ -410,62 +573,99 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: spacing['2xl'],
     gap: spacing.md,
+    rowGap: spacing.lg,
   },
   productCard: {
     width: CARD_WIDTH,
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: 20,
     overflow: 'hidden',
-    ...shadows.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   imageContainer: {
     position: 'relative',
+    backgroundColor: colors.surfaceAlt,
   },
   productImage: {
     width: '100%',
-    height: CARD_WIDTH * 1.1,
-    backgroundColor: colors.skeleton,
+    height: CARD_WIDTH * 0.95,
   },
   saleBadge: {
     position: 'absolute',
     top: spacing.sm,
     left: spacing.sm,
-    backgroundColor: colors.accent,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: '#EF4444',
+    borderRadius: radius.xs,
+    paddingHorizontal: 6,
     paddingVertical: 2,
   },
   saleBadgeText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: 10,
-    color: colors.textPrimary,
+    fontFamily: fonts.bodyBold,
+    fontSize: 9,
+    color: colors.surface,
     letterSpacing: 0.5,
   },
   wishlistButton: {
     position: 'absolute',
     top: spacing.sm,
     right: spacing.sm,
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     justifyContent: 'center',
     alignItems: 'center',
+    ...shadows.sm,
   },
   productInfo: {
     padding: spacing.md,
   },
   productTitle: {
-    fontFamily: fonts.bodyMedium,
+    fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.sm,
     color: colors.textPrimary,
     lineHeight: 18,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   productPrice: {
-    fontFamily: fonts.heading,
+    fontFamily: fonts.headingBold,
     fontSize: fontSize.md,
     color: colors.primary,
+  },
+  cardPriceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  ratingInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  ratingInlineText: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: colors.textSecondary,
+  },
+  noRatingText: {
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: colors.textTertiary,
+  },
+  cardAddToCartBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.full,
+    paddingVertical: 7,
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  cardAddToCartText: {
+    fontFamily: fonts.heading,
+    fontSize: fontSize.xs,
+    color: colors.surface,
   },
   outOfStock: {
     fontFamily: fonts.bodyMedium,
@@ -492,21 +692,32 @@ const styles = StyleSheet.create({
   trustSection: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: spacing['2xl'],
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    paddingHorizontal: spacing.md,
     marginHorizontal: spacing['2xl'],
     marginTop: spacing['2xl'],
-    backgroundColor: colors.primarySoft,
-    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   trustItem: {
     alignItems: 'center',
-    gap: spacing.xs,
+    flex: 1,
   },
-  trustText: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: 10,
-    color: colors.primary,
+  trustItemTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    color: colors.textPrimary,
+    marginTop: 4,
     textAlign: 'center',
+  },
+  trustItemSub: {
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 1,
   },
 });

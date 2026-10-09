@@ -1,6 +1,8 @@
 import { Tabs, useRouter } from 'expo-router';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useCartStore } from '../../store/cartStore';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
 
@@ -30,27 +32,34 @@ function HeaderCartButton() {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 12);
+  const tabBarHeight = 56 + bottomInset;
+
   return (
     <Tabs
       screenOptions={{
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textTertiary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarLabelStyle: {
+          fontFamily: fonts.bodyMedium,
+          fontSize: 11,
+          marginTop: -2,
+          marginBottom: 2,
+        },
         tabBarStyle: {
-          position: 'absolute',
-          bottom: 20,
-          left: 20,
-          right: 20,
           backgroundColor: colors.surface,
-          borderRadius: 30,
-          height: 64,
-          paddingTop: 8,
-          paddingBottom: 8,
-          elevation: 10,
-          shadowColor: colors.primaryDark,
-          shadowOffset: { width: 0, height: 10 },
-          shadowOpacity: 0.15,
-          shadowRadius: 20,
+          height: tabBarHeight,
+          paddingTop: 6,
+          paddingBottom: bottomInset,
+          elevation: 12,
+          shadowColor: '#124638',
+          shadowOffset: { width: 0, height: -3 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
           borderTopWidth: 0,
         },
         headerStyle: {
@@ -77,62 +86,62 @@ export default function TabsLayout() {
             fontSize: fontSize.xl,
             color: colors.primary,
           },
-          tabBarIcon: ({ color, size, focused }) => (
-            <View style={{
-              backgroundColor: focused ? colors.primarySoft : 'transparent',
-              padding: 10,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <MaterialCommunityIcons 
-                name={focused ? "home-variant" : "home-variant-outline"} 
-                size={focused ? 28 : 24} 
-                color={color} 
-              />
-            </View>
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "home" : "home-outline"} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="categories"
         options={{
-          title: 'Categories',
-          tabBarIcon: ({ color, size, focused }) => (
-            <View style={{
-              backgroundColor: focused ? colors.primarySoft : 'transparent',
-              padding: 10,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <MaterialCommunityIcons 
-                name={focused ? "view-grid" : "view-grid-outline"} 
-                size={focused ? 28 : 24} 
-                color={color} 
-              />
-            </View>
+          title: 'Shop',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "view-grid" : "view-grid-outline"} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: 'Search',
+          title: '',
           headerShown: false,
-          tabBarIcon: ({ color, size, focused }) => (
-            <View style={{
-              backgroundColor: focused ? colors.primarySoft : 'transparent',
-              padding: 10,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <MaterialCommunityIcons 
-                name="magnify" 
-                size={focused ? 28 : 24} 
-                color={color} 
-              />
+          tabBarLabel: () => null,
+          tabBarIcon: ({ focused }) => (
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: '#ffffff',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginTop: -32,
+                elevation: 8,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+                borderWidth: 4,
+                borderColor: '#ffffff',
+              }}
+            >
+              <View style={{ width: '100%', height: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
+                <Image
+                  source={require('../../assets/gif/output-onlinegiftools.gif')}
+                  style={{ width: '100%', height: '100%', transform: [{ scale: 1.1 }] }}
+                  contentFit="cover"
+                />
+                {/* Overlay to adjust brightness/contrast slightly by overlaying semi-transparent white */}
+                <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+              </View>
             </View>
           ),
         }}
@@ -141,41 +150,25 @@ export default function TabsLayout() {
         name="orders"
         options={{
           title: 'Orders',
-          tabBarIcon: ({ color, size, focused }) => (
-            <View style={{
-              backgroundColor: focused ? colors.primarySoft : 'transparent',
-              padding: 10,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <MaterialCommunityIcons 
-                name={focused ? "package-variant" : "package-variant-closed"} 
-                size={focused ? 28 : 24} 
-                color={color} 
-              />
-            </View>
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "package-variant-closed" : "package-variant-closed-remove"} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size, focused }) => (
-            <View style={{
-              backgroundColor: focused ? colors.primarySoft : 'transparent',
-              padding: 10,
-              borderRadius: 20,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <MaterialCommunityIcons 
-                name={focused ? "account-circle" : "account-circle-outline"} 
-                size={focused ? 28 : 24} 
-                color={color} 
-              />
-            </View>
+          title: 'Account',
+          tabBarIcon: ({ color, focused }) => (
+            <MaterialCommunityIcons 
+              name={focused ? "account" : "account-outline"} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />

@@ -8,35 +8,25 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { Category } from '../../types';
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Electronics: 'cellphone',
-  Clothing: 'tshirt-crew',
-  Home: 'home-outline',
-  Books: 'book-open-variant',
-  Ayurveda: 'leaf',
-  Wellness: 'heart-pulse',
-  Medicines: 'pill',
-  'Healthcare Devices': 'medical-bag',
-  'Personal Care': 'face-woman-shimmer',
-  Nutrition: 'food-apple-outline',
+const CATEGORY_DETAILS: Record<string, { icon: string; subtitle: string }> = {
+  'OTC Medicines': { icon: 'pill', subtitle: 'Everyday non-prescription essentials' },
+  'Prescription Medicines': { icon: 'file-document-outline', subtitle: 'Prescription & specialized medicines' },
+  'First Aid': { icon: 'medical-bag', subtitle: 'Essential medical supplies & bandages' },
+  'Personal Care': { icon: 'bottle-tonic-outline', subtitle: 'Skincare, hygiene & wellness' },
+  'Health Monitoring': { icon: 'heart-pulse', subtitle: 'Monitors, testers & diagnostic devices' },
+  'Baby Care': { icon: 'baby-bottle-outline', subtitle: 'Gentle care for your little one' },
+  'Healthcare Devices': { icon: 'stethoscope', subtitle: 'Better living & medical equipment' },
 };
-
-const CATEGORY_COLORS = [
-  colors.primarySoft,
-  colors.accentSoft,
-  colors.infoSoft,
-  colors.successSoft,
-  colors.warningSoft,
-  colors.errorSoft,
-];
 
 export default function CategoriesScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,10 +48,8 @@ export default function CategoriesScreen() {
   return (
     <FlatList
       data={categories}
-      numColumns={2}
       keyExtractor={(item) => item.id.toString()}
-      contentContainerStyle={styles.listContent}
-      columnWrapperStyle={styles.columnWrapper}
+      contentContainerStyle={[styles.listContent, { paddingTop: insets.top + spacing.sm }]}
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <View style={styles.centered}>
@@ -69,20 +57,26 @@ export default function CategoriesScreen() {
           <Text style={styles.emptyText}>No categories found</Text>
         </View>
       }
-      renderItem={({ item, index }) => {
-        const iconName = CATEGORY_ICONS[item.name] || 'tag-outline';
-        const bgColor = CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+      renderItem={({ item }) => {
+        const details = CATEGORY_DETAILS[item.name] || {
+          icon: 'tag-outline',
+          subtitle: 'Explore products in this category',
+        };
         return (
           <TouchableOpacity
-            style={styles.card}
+            style={styles.categoryRowCard}
             onPress={() => router.push(`/category/${item.name}`)}
             activeOpacity={0.85}
             accessibilityLabel={`Category: ${item.name}`}
           >
-            <View style={[styles.iconContainer, { backgroundColor: bgColor }]}>
-              <MaterialCommunityIcons name={iconName as any} size={32} color={colors.primary} />
+            <View style={styles.iconContainer}>
+              <MaterialCommunityIcons name={details.icon as any} size={24} color={colors.primary} />
             </View>
-            <Text style={styles.cardTitle}>{item.name}</Text>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>{item.name}</Text>
+              <Text style={styles.cardSubtitle}>{details.subtitle}</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textTertiary} />
           </TouchableOpacity>
         );
       }}
@@ -93,28 +87,39 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   listContent: { padding: spacing['2xl'], paddingBottom: 130 },
-  columnWrapper: { gap: spacing.md, marginBottom: spacing.md },
-  card: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 24,
-    padding: spacing.xl,
+  categoryRowCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    ...shadows.md,
+    backgroundColor: colors.surface,
+    borderRadius: 20,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
   },
   iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primarySoft,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginRight: spacing.md,
+  },
+  textContainer: {
+    flex: 1,
   },
   cardTitle: {
-    fontFamily: fonts.bodyMedium,
-    fontSize: fontSize.sm,
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
     color: colors.textPrimary,
-    textAlign: 'center',
+  },
+  cardSubtitle: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   emptyText: {
     fontFamily: fonts.body,

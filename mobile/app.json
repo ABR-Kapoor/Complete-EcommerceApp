@@ -31,7 +31,15 @@
           "resizeMode": "contain",
           "backgroundColor": "#DCFCE7"
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow AuraMart to use your microphone for voice product search.",
+          "recordAudioAndroid": true
+        }
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

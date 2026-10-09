@@ -6,7 +6,7 @@ from app.db import get_supabase_client
 from app.models import Product
 
 # Import basic routers
-from app.routes import products, cart, wishlist, reviews, users, admin, orders
+from app.routes import products, cart, wishlist, reviews, users, admin, orders, search
 
 load_dotenv()
 
@@ -49,3 +49,4 @@ app.include_router(wishlist.router)
 app.include_router(reviews.router)
 app.include_router(users.router)
 app.include_router(orders.router)
+app.include_router(search.router)
