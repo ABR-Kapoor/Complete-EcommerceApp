@@ -18,11 +18,20 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
 import { useWishlistStore } from '../../store/wishlistStore';
 import { useCartStore } from '../../store/cartStore';
+import { useVoiceSearchStore } from '../../store/voiceSearchStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { Product, Category } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - spacing['2xl'] * 2 - spacing.md) / 2;
+const DEAL_CARD_WIDTH = 150;
+
+function timeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 // ──────────────────────────────────
 // Skeleton placeholder
@@ -126,6 +135,33 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 // ──────────────────────────────────
+// Top deal card
+// ──────────────────────────────────
+function DealCard({ product, onPress }: { product: Product; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.dealCard} onPress={onPress} activeOpacity={0.9}>
+      <View style={styles.dealImageWrap}>
+        <Image
+          source={{ uri: product.image_url }}
+          style={styles.dealImage}
+          contentFit="cover"
+          transition={150}
+        />
+        <View style={styles.dealBadge}>
+          <Text style={styles.dealBadgeText}>SALE</Text>
+        </View>
+      </View>
+      <View style={styles.dealInfo}>
+        <Text style={styles.dealTitle} numberOfLines={1}>
+          {product.title}
+        </Text>
+        <Text style={styles.dealPrice}>₹{product.price.toLocaleString()}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// ──────────────────────────────────
 // Category chip
 // ──────────────────────────────────
 const CATEGORY_ICONS: Record<string, string> = {
@@ -179,6 +215,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useUser();
   const insets = useSafeAreaInsets();
+  const openVoice = useVoiceSearchStore((s) => s.open);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -248,7 +285,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.xs }]}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top > 0 ? insets.top : spacing.xs }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -259,50 +296,76 @@ export default function HomeScreen() {
         />
       }
     >
-      {/* Search Bar */}
+      {/* Greeting Header */}
+      <View style={styles.greetingRow}>
+        <View style={styles.greetingTextGroup}>
+          <Text style={styles.greetingSubline}>{timeGreeting()}</Text>
+          <Text style={styles.greetingTitle} numberOfLines={1}>
+            {greeting}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.greetingAvatarBtn}
+          onPress={() => router.push('/profile/edit')}
+          activeOpacity={0.85}
+          accessibilityLabel="Open profile settings"
+        >
+          {user?.imageUrl ? (
+            <Image
+              source={{ uri: user.imageUrl }}
+              style={styles.greetingAvatar}
+              contentFit="cover"
+              transition={200}
+            />
+          ) : (
+            <MaterialCommunityIcons name="account" size={22} color={colors.primary} />
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Hero Text Search Bar with Mic button */}
       <View style={styles.searchBarWrapper}>
         <TouchableOpacity
           style={styles.searchBar}
           onPress={() => router.push('/(tabs)/search')}
-          activeOpacity={0.85}
+          activeOpacity={0.9}
           accessibilityLabel="Search products"
         >
-          <MaterialCommunityIcons name="magnify" size={22} color={colors.primary} />
-          <Text style={styles.searchPlaceholder}>Search medicines, healthcare products...</Text>
+          <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} />
+          <Text style={styles.searchPlaceholder}>Search medicines, health essentials...</Text>
+          <TouchableOpacity
+            style={styles.heroMicBtn}
+            onPress={(e) => {
+              e.stopPropagation();
+              openVoice();
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Search by voice"
+          >
+            <MaterialCommunityIcons name="microphone" size={18} color={colors.primary} />
+          </TouchableOpacity>
         </TouchableOpacity>
       </View>
 
-      {/* Hero Banner */}
-      <View style={styles.heroBanner}>
-        <View style={styles.heroBadge}>
-          <MaterialCommunityIcons name="shield-check" size={14} color={colors.primary} />
-          <Text style={styles.heroBadgeText}>TRUSTED PHARMACY</Text>
-        </View>
-
-        <Text style={styles.heroTitle}>Healthcare essentials, made simpler.</Text>
-        <Text style={styles.heroSubtitle}>
-          Discover pharmacy essentials with clear information, transparent pricing & fast delivery.
-        </Text>
-
-        <View style={styles.heroCtaRow}>
-          <TouchableOpacity
-            style={styles.heroPrimaryBtn}
-            onPress={() => router.push('/(tabs)/categories')}
-            activeOpacity={0.88}
+      {/* Top Deals */}
+      {saleProducts.length > 0 && (
+        <>
+          <SectionHeader title="Top Deals" onSeeAll={() => setActiveTab('sale')} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dealScrollContent}
           >
-            <Text style={styles.heroPrimaryBtnText}>Shop Products</Text>
-            <MaterialCommunityIcons name="arrow-right" size={16} color={colors.surface} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.heroSecondaryBtn}
-            onPress={() => router.push('/(tabs)/categories')}
-            activeOpacity={0.88}
-          >
-            <Text style={styles.heroSecondaryBtnText}>Explore Categories</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            {saleProducts.map((product) => (
+              <DealCard
+                key={product.id}
+                product={product}
+                onPress={() => router.push(`/product/${product.id}`)}
+              />
+            ))}
+          </ScrollView>
+        </>
+      )}
 
       {/* Categories */}
       {categories.length > 0 && (
@@ -394,10 +457,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingBottom: 140, paddingTop: spacing.xs },
+  scrollContent: { paddingBottom: 140, paddingTop: 0 },
   searchBarWrapper: {
     marginHorizontal: spacing['2xl'],
-    marginTop: spacing.sm,
+    marginTop: 6,
     marginBottom: spacing.md,
   },
   searchBar: {
@@ -405,91 +468,118 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: radius.full,
-    paddingHorizontal: spacing.lg,
-    height: 50,
+    paddingLeft: spacing.lg,
+    paddingRight: 6,
+    height: 48,
     borderWidth: 1,
     borderColor: colors.border,
     ...shadows.sm,
   },
   searchPlaceholder: {
+    flex: 1,
     fontFamily: fonts.body,
     fontSize: fontSize.sm,
     color: colors.textTertiary,
     marginLeft: spacing.sm,
   },
-  heroBanner: {
+  heroMicBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.primarySoft,
-    borderRadius: 24,
-    marginHorizontal: spacing['2xl'],
-    marginBottom: spacing.xl,
-    padding: spacing.xl,
-    borderWidth: 1,
-    borderColor: '#D4E8DC',
-    ...shadows.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  heroBadge: {
+  greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.surface,
-    alignSelf: 'flex-start',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-    borderRadius: radius.full,
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing['2xl'],
+    marginTop: spacing.xs,
+    marginBottom: 4,
   },
-  heroBadgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 10,
-    color: colors.primary,
-    letterSpacing: 0.5,
+  greetingTextGroup: {
+    flex: 1,
+    marginRight: spacing.md,
   },
-  heroTitle: {
-    fontFamily: fonts.headingBold,
-    fontSize: 22,
-    color: colors.textPrimary,
-    lineHeight: 28,
-    marginBottom: spacing.xs,
-  },
-  heroSubtitle: {
-    fontFamily: fonts.body,
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.lg,
-  },
-  heroCtaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  heroPrimaryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 11,
-    borderRadius: radius.full,
-    gap: spacing.xs,
-  },
-  heroPrimaryBtnText: {
-    fontFamily: fonts.heading,
+  greetingSubline: {
+    fontFamily: fonts.bodyMedium,
     fontSize: fontSize.xs,
-    color: colors.surface,
+    color: colors.textSecondary,
+    textTransform: 'capitalize',
   },
-  heroSecondaryBtn: {
+  greetingTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.xl,
+    color: colors.textPrimary,
+    marginTop: 2,
+  },
+  greetingAvatarBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 11,
-    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    ...shadows.sm,
   },
-  heroSecondaryBtnText: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.xs,
+  greetingAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  dealScrollContent: {
+    paddingHorizontal: spacing['2xl'],
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  dealCard: {
+    width: DEAL_CARD_WIDTH,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  dealImageWrap: {
+    position: 'relative',
+    backgroundColor: colors.surfaceAlt,
+  },
+  dealImage: {
+    width: '100%',
+    height: 104,
+  },
+  dealBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    backgroundColor: '#EF4444',
+    borderRadius: radius.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  dealBadgeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 9,
+    color: colors.surface,
+    letterSpacing: 0.5,
+  },
+  dealInfo: {
+    padding: spacing.md,
+  },
+  dealTitle: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.sm,
     color: colors.textPrimary,
+  },
+  dealPrice: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    marginTop: 2,
   },
   sectionHeader: {
     flexDirection: 'row',

@@ -76,7 +76,10 @@ export default function ProfileScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.sm }]}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingTop: insets.top > 0 ? Math.max(0, insets.top - 4) : spacing.sm },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {/* Profile Header */}

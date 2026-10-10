@@ -123,15 +123,33 @@ def get_user_orders(user_id: str, email: str = None):
         res = client.table("orders").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
         orders_data = res.data or []
         
+        all_product_ids = set()
         for order in orders_data:
-            # Join items and products safely
-            items_res = client.table("order_items").select("*, products(title, image_url)").eq("order_id", order["id"]).execute()
-            order["order_items"] = items_res.data if items_res and hasattr(items_res, "data") else []
+            # Fetch order items
+            items_res = client.table("order_items").select("*").eq("order_id", order["id"]).execute()
+            items = items_res.data if items_res and hasattr(items_res, "data") else []
+            order["order_items"] = items
+            for it in items:
+                if it.get("product_id"):
+                    all_product_ids.add(it["product_id"])
             
             # Get address safely
             addr_res = client.table("addresses").select("*").eq("user_id", user_id).maybe_single().execute()
             order["address"] = addr_res.data if addr_res and hasattr(addr_res, "data") else None
-            
+
+        # Bulk hydrate products for all order items
+        if all_product_ids:
+            try:
+                p_res = client.table("products").select("id, title, image_url, price, category").in_("id", list(all_product_ids)).execute()
+                p_map = {p["id"]: p for p in (p_res.data or [])}
+                for order in orders_data:
+                    for it in order.get("order_items", []):
+                        pid = it.get("product_id")
+                        if pid in p_map:
+                            it["products"] = p_map[pid]
+            except Exception as pe:
+                print(f"Product hydration error for orders: {pe}")
+
         return orders_data
     except Exception as e:
         print(f"Fetch Orders Error: {e}")

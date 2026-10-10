@@ -114,12 +114,6 @@ export default function OrderDetailScreen() {
   const canCancel = ['pending_payment', 'confirmed'].includes(order.status);
 
   const createdDate = new Date(order.created_at);
-  const deliveryDate = new Date(createdDate.getTime() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
   const totalItemCount = (order.order_items || []).reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -151,26 +145,22 @@ export default function OrderDetailScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Estimated Delivery Banner Card */}
+        {/* Verified Shipment Status Card (From Database) */}
         <View style={styles.deliveryCard}>
           <View style={styles.deliveryBadgeRow}>
-            <MaterialCommunityIcons name="truck-fast-outline" size={22} color={colors.primary} />
+            <MaterialCommunityIcons name="truck-delivery-outline" size={22} color={colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.deliveryLabelText}>
-                {isCancelled ? 'Shipment Cancelled' : 'Estimated Delivery'}
-              </Text>
+              <Text style={styles.deliveryLabelText}>Shipment Status</Text>
               <Text style={styles.deliveryDateText}>
-                {isCancelled ? 'Order was cancelled' : `Delivering by ${deliveryDate}`}
+                {isCancelled ? 'Order Cancelled' : `Status: ${order.status.replace('_', ' ').toUpperCase()}`}
               </Text>
             </View>
-            {!isCancelled && (
-              <View style={styles.onTimeBadge}>
-                <Text style={styles.onTimeText}>On Schedule</Text>
-              </View>
-            )}
+            <View style={[styles.onTimeBadge, isCancelled && { backgroundColor: colors.error }]}>
+              <Text style={styles.onTimeText}>{order.status.toUpperCase()}</Text>
+            </View>
           </View>
           <Text style={styles.deliverySubtext}>
-            Express Health Courier · {totalItemCount} item{totalItemCount > 1 ? 's' : ''} in package
+            AuraMart Pharmacy Delivery • {totalItemCount} item{totalItemCount > 1 ? 's' : ''} in package
           </Text>
         </View>
 
@@ -246,9 +236,15 @@ export default function OrderDetailScreen() {
           </View>
           <Text style={styles.addressName}>{(order as any).name || user?.fullName || 'Customer'}</Text>
           <Text style={styles.addressSubtext}>
-            {order.address?.street ? `${order.address.street}, ${order.address.city}, ${order.address.state} - ${order.address.zip_code}` : 'Hehe, Bilaspur, Chhattisgarh - 495001'}
+            {order.address?.street
+              ? `${order.address.street}${order.address.city ? `, ${order.address.city}` : ''}${order.address.state ? `, ${order.address.state}` : ''}${order.address.zip_code ? ` - ${order.address.zip_code}` : ''}`
+              : 'Delivery Address on file'}
           </Text>
-          <Text style={styles.addressPhone}>+91 {(order as any).phone || '9876543210'}</Text>
+          {((order as any).phone || user?.primaryPhoneNumber?.phoneNumber) ? (
+            <Text style={styles.addressPhone}>
+              {(order as any).phone ? `+91 ${(order as any).phone}` : user?.primaryPhoneNumber?.phoneNumber}
+            </Text>
+          ) : null}
         </View>
 
         {/* Order Items & Product Delivery List */}

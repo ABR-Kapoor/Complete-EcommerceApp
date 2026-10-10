@@ -16,6 +16,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 
+import CheckoutJourneyStepper from '../../components/CheckoutJourneyStepper';
+
 export default function CheckoutAddressScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -79,44 +81,35 @@ export default function CheckoutAddressScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Step 1: Delivery Address',
-          headerTransparent: true,
-          headerShadowVisible: false,
-          headerTintColor: colors.textPrimary,
-          headerTitleStyle: { fontFamily: fonts.heading, fontSize: fontSize.lg },
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={{
-                marginLeft: spacing.md,
-                width: 38,
-                height: 38,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: radius.full,
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      {/* Safe Area Top Header */}
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 12) + spacing.xs }]}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/cart');
+            }
+          }}
+          style={styles.headerIconButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Delivery Address</Text>
+        <View style={{ width: 38 }} />
+      </View>
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 60 }]} keyboardShouldPersistTaps="handled">
-        <View style={styles.stepIndicator}>
-          <Text style={styles.stepText}>Step 1 of 3</Text>
-        </View>
+      {/* Modern Journey Stepper */}
+      <CheckoutJourneyStepper currentStep={2} />
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 20) + 40 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Shipping Details</Text>
@@ -205,6 +198,27 @@ export default function CheckoutAddressScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  headerTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.primary,
+  },
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollContent: { padding: spacing['2xl'], paddingBottom: 60 },
   stepIndicator: { marginBottom: spacing.md },
   stepText: { fontFamily: fonts.bodyBold, fontSize: fontSize.xs, color: colors.primary },

@@ -80,6 +80,7 @@ export interface OrderItem {
   products?: {
     title: string;
     image_url: string;
+    category?: string;
   };
 }
 

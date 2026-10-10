@@ -141,6 +141,7 @@ export default function TabsLayout() {
         name="orders"
         options={{
           title: 'Orders',
+          headerShown: false,
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons 
               name={focused ? "package-variant-closed" : "package-variant-closed-remove"} 

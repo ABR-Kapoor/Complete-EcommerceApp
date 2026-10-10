@@ -13,6 +13,7 @@ import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../../store/cartStore';
+import CheckoutJourneyStepper from '../../components/CheckoutJourneyStepper';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { CartItem } from '../../types';
 
@@ -128,42 +129,8 @@ export default function CartScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Stepper Progress Bar */}
-      <View style={styles.stepperContainer}>
-        <View style={styles.stepItem}>
-          <View style={[styles.stepCircle, styles.stepCircleActive]}>
-            <MaterialCommunityIcons name="cart-outline" size={12} color={colors.surface} />
-          </View>
-          <Text style={[styles.stepLabel, styles.stepLabelActive]}>Cart</Text>
-        </View>
-
-        <View style={styles.stepLine} />
-
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircle}>
-            <Text style={styles.stepNumber}>2</Text>
-          </View>
-          <Text style={styles.stepLabel}>Checkout</Text>
-        </View>
-
-        <View style={styles.stepLine} />
-
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircle}>
-            <Text style={styles.stepNumber}>3</Text>
-          </View>
-          <Text style={styles.stepLabel}>Payment</Text>
-        </View>
-
-        <View style={styles.stepLine} />
-
-        <View style={styles.stepItem}>
-          <View style={styles.stepCircle}>
-            <Text style={styles.stepNumber}>4</Text>
-          </View>
-          <Text style={styles.stepLabel}>Confirmation</Text>
-        </View>
-      </View>
+      {/* Modern Checkout Journey Stepper */}
+      <CheckoutJourneyStepper currentStep={1} />
 
       {/* Cart Subheader */}
       {items.length > 0 && (

@@ -1,15 +1,22 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
+import CheckoutJourneyStepper from '../../components/CheckoutJourneyStepper';
 
 export default function CheckoutSuccessScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { orderId, total } = useLocalSearchParams<{ orderId?: string; total?: string }>();
 
   return (
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Top Safe Area Spacing */}
+      <View style={{ paddingTop: Math.max(insets.top, 12) + spacing.xs }} />
+      <CheckoutJourneyStepper currentStep={4} />
 
       <View style={styles.content}>
         <View style={styles.iconCircle}>

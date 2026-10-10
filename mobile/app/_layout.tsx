@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, BackHandler } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { ClerkProvider, ClerkLoaded, useAuth, useUser } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
@@ -65,6 +65,26 @@ function AuthGate() {
       router.replace('/(tabs)');
     }
   }, [isSignedIn, isLoaded, segments]);
+
+  // Activate hardware back button for entire application
+  useEffect(() => {
+    const onBackPress = () => {
+      const currentSegment = (segments[segments.length - 1] as string) || '';
+      const isRoot = !currentSegment || currentSegment === '(tabs)' || currentSegment === 'index';
+
+      if (router.canGoBack()) {
+        router.back();
+        return true;
+      } else if (!isRoot && isSignedIn) {
+        router.replace('/(tabs)');
+        return true;
+      }
+      return false;
+    };
+
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [router, segments, isSignedIn]);
 
   // Sync user data on sign-in
   useEffect(() => {

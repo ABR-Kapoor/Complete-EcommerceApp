@@ -40,8 +40,8 @@ function ProductRow({
   onPress: () => void;
   onAddToCart: () => void;
 }) {
-  const ratingVal = product.rating ? Number(product.rating).toFixed(1) : '4.5';
-  const reviewsCount = product.reviews_count || 12;
+  const ratingVal = product.avg_rating ? Number(product.avg_rating).toFixed(1) : '4.5';
+  const reviewsCount = product.review_count || 12;
 
   return (
     <TouchableOpacity style={styles.productCard} onPress={onPress} activeOpacity={0.88}>
