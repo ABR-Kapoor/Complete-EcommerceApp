@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useCartStore } from '../../store/cartStore';
+import { useVoiceSearchStore } from '../../store/voiceSearchStore';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
 
 function CartBadge() {
@@ -33,8 +34,10 @@ function HeaderCartButton() {
 
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const openVoice = useVoiceSearchStore((s) => s.open);
   const bottomInset = Math.max(insets.bottom, 12);
-  const tabBarHeight = 56 + bottomInset;
+  const tabBarHeight = 58 + bottomInset;
 
   return (
     <Tabs
@@ -114,35 +117,23 @@ export default function TabsLayout() {
           title: '',
           headerShown: false,
           tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => (
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: '#ffffff',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginTop: -32,
-                elevation: 8,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                borderWidth: 4,
-                borderColor: '#ffffff',
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              activeOpacity={0.82}
+              style={styles.voiceTabTouchable}
+              onPress={() => {
+                openVoice();
+                router.push('/(tabs)/search');
               }}
             >
-              <View style={{ width: '100%', height: '100%', borderRadius: 28, overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
+              <View style={styles.voiceOrbContainer}>
                 <Image
                   source={require('../../assets/gif/output-onlinegiftools.gif')}
-                  style={{ width: '100%', height: '100%', transform: [{ scale: 1.1 }] }}
+                  style={styles.voiceOrbGif}
                   contentFit="cover"
                 />
-                {/* Overlay to adjust brightness/contrast slightly by overlaying semi-transparent white */}
-                <View style={{ ...StyleSheet.absoluteFill, backgroundColor: 'rgba(255,255,255,0.1)' }} />
               </View>
-            </View>
+            </TouchableOpacity>
           ),
         }}
       />
@@ -201,5 +192,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.textPrimary,
     lineHeight: 14,
+  },
+  voiceTabTouchable: {
+    top: -22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+    height: 70,
+  },
+  voiceOrbContainer: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    elevation: 8,
+    shadowColor: '#124638',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+  },
+  voiceOrbGif: {
+    width: '100%',
+    height: '100%',
+    transform: [{ scale: 1.15 }],
   },
 });

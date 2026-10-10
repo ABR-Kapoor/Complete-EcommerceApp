@@ -86,17 +86,18 @@ def extract_intent(transcript, categories=None):
     prompt = (
         "You are the voice shopping assistant for AuraMart, an online pharmacy and "
         "healthcare store.\n"
-        "A customer spoke the transcript below. It may be in ANY language.\n\n"
+        "A customer spoke the transcript below. It may be in ANY language or mixture of languages, with noise or rambling speech.\n\n"
         "Transcript: \"\"\"{transcript}\"\"\"\n\n"
         "Available store categories: {categories}\n\n"
+        "Your task: Extract the exact product, medicine, or health symptom intent. Ignore filler words or irrelevant conversation.\n"
         "Return ONLY a JSON object with this exact shape:\n"
         "{{\n"
-        '  "english_query": "the product the customer wants, translated to concise English",\n'
-        '  "keywords": ["3 to 6 short English search keywords"],\n'
-        '  "category": "the single best matching category from the list, or an empty string",\n'
-        '  "reply": "one short friendly English sentence confirming what you are finding"\n'
+        '  "english_query": "concise English product/medicine query representing user intent (e.g. Dizziness & Vertigo Medicine)",\n'
+        '  "keywords": ["3 to 6 short English search keywords for product title/description matching"],\n'
+        '  "category": "the single best matching category from available store categories, or an empty string",\n'
+        '  "reply": "one short, warm, helpful English sentence confirming the intent and recommended products"\n'
         "}}\n"
-        "Do not add any text outside the JSON."
+        "Do not add any markdown formatting or text outside the JSON."
     ).format(transcript=transcript, categories=category_list)
 
     body = {

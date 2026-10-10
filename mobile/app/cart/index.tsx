@@ -101,56 +101,38 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerTitle: 'AuraMart',
-          headerTransparent: true,
-          headerShadowVisible: false,
-          headerTitleStyle: { fontFamily: fonts.headingBold, fontSize: fontSize.xl, color: colors.primary },
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={{
-                marginLeft: spacing.md,
-                width: 38,
-                height: 38,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: radius.full,
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity onPress={() => router.push('/(tabs)/search')} style={{
-                marginRight: spacing.md,
-                width: 38,
-                height: 38,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: radius.full,
-              }}>
-              <MaterialCommunityIcons name="magnify" size={20} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      {/* Custom Header Bar with Safe Top Padding */}
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 12) + spacing.xs }]}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+          style={styles.headerIconButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
+
+        <Text style={styles.headerTitle}>Shopping Cart</Text>
+
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/search')}
+          style={styles.headerIconButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialCommunityIcons name="magnify" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
+      </View>
 
       {/* Stepper Progress Bar */}
-      <View style={[styles.stepperContainer, { paddingTop: insets.top + 60 }]}>
+      <View style={styles.stepperContainer}>
         <View style={styles.stepItem}>
           <View style={[styles.stepCircle, styles.stepCircleActive]}>
-            <MaterialCommunityIcons name="cart-outline" size={14} color={colors.surface} />
+            <MaterialCommunityIcons name="cart-outline" size={12} color={colors.surface} />
           </View>
           <Text style={[styles.stepLabel, styles.stepLabelActive]}>Cart</Text>
         </View>
@@ -199,7 +181,10 @@ export default function CartScreen() {
         data={items}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <CartItemCard item={item} />}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: items.length > 0 ? 180 + bottomInset : spacing.xl },
+        ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
@@ -217,9 +202,9 @@ export default function CartScreen() {
         }
       />
 
-      {/* Sticky Bottom Bar */}
+      {/* Sticky Bottom Summary Bar */}
       {items.length > 0 && (
-        <View style={styles.summaryBar}>
+        <View style={[styles.summaryBar, { paddingBottom: bottomInset + spacing.sm }]}>
           <TouchableOpacity
             style={styles.continueShoppingBtn}
             onPress={() => router.replace('/(tabs)')}
@@ -254,6 +239,27 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  headerTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.primary,
+  },
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   stepperContainer: {
     flexDirection: 'row',
     alignItems: 'center',
