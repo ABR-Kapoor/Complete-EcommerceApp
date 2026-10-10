@@ -47,13 +47,14 @@ function ProductRow({
     <TouchableOpacity style={styles.productCard} onPress={onPress} activeOpacity={0.88}>
       <Image source={{ uri: product.image_url }} style={styles.productImage} contentFit="cover" transition={150} />
       <View style={styles.productInfo}>
-        <Text style={styles.productCategory}>{product.category || 'Healthcare'}</Text>
-        <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
-        <View style={styles.ratingRow}>
-          <MaterialCommunityIcons name="star" size={14} color="#F59E0B" />
-          <Text style={styles.ratingText}>{ratingVal}</Text>
-          <Text style={styles.reviewsText}>({reviewsCount})</Text>
+        <View style={styles.categoryRow}>
+          <Text style={styles.productCategory}>{product.category || 'Healthcare'}</Text>
+          <View style={styles.ratingRow}>
+            <MaterialCommunityIcons name="star" size={12} color="#F59E0B" />
+            <Text style={styles.ratingText}>{ratingVal}</Text>
+          </View>
         </View>
+        <Text style={styles.productTitle} numberOfLines={2}>{product.title}</Text>
         <Text style={styles.productPrice}>₹{Number(product.price).toLocaleString()}</Text>
       </View>
       <TouchableOpacity
@@ -73,17 +74,17 @@ function ProductRow({
 function statusTitle(phase: Phase): string {
   switch (phase) {
     case 'requesting':
-      return 'Waking up the mic…';
+      return 'Waking up mic…';
     case 'listening':
       return 'Listening…';
     case 'processing':
-      return 'Finding best matches…';
+      return 'Searching with Aura AI…';
     case 'results':
       return 'Here is what I found';
     case 'error':
       return 'Something went wrong';
     default:
-      return 'Voice search';
+      return 'Voice Search';
   }
 }
 
@@ -93,8 +94,8 @@ function statusSubtitle(phase: Phase, durationMillis: number, error: string): st
     return `Speak in any language — tap Done when finished · ${Math.round((durationMillis || 0) / 1000)}s`;
   }
   if (phase === 'requesting') return 'Grant microphone access to search by voice.';
-  if (phase === 'processing') return 'Analyzing your speech with Gemini AI…';
-  if (phase === 'results') return 'Tap a product to view details or add to cart.';
+  if (phase === 'processing') return 'Analyzing your speech with Aura AI…';
+  if (phase === 'results') return 'Tap a product to open or add to cart.';
   return 'Tap the mic and describe what you need.';
 }
 
@@ -222,7 +223,7 @@ export default function VoiceSearchDialog() {
   const isResults = phase === 'results';
   const showGif = !isBusy || isListening;
 
-  const gifSize = isResults ? 72 : 150;
+  const gifSize = isResults ? 48 : 140;
 
   return (
     <Modal
@@ -236,14 +237,14 @@ export default function VoiceSearchDialog() {
         <View
           style={[
             styles.sheet,
-            { paddingBottom: Math.max(insets.bottom, 20) + spacing.md },
+            { paddingBottom: Math.max(insets.bottom, 16) + spacing.sm },
           ]}
         >
           {/* Header Row */}
           <View style={styles.headerRow}>
             <View style={styles.brandRow}>
               <MaterialCommunityIcons name="creation" size={20} color={colors.primary} />
-              <Text style={styles.brand}>AuraMart Voice</Text>
+              <Text style={styles.brand}>Aura AI Voice</Text>
             </View>
             <TouchableOpacity
               onPress={handleClose}
@@ -255,8 +256,8 @@ export default function VoiceSearchDialog() {
             </TouchableOpacity>
           </View>
 
-          {/* GIF Animation container (Smaller when output results arrive) */}
-          <View style={[styles.mediaWrap, { height: gifSize + 16 }]}>
+          {/* GIF Animation container */}
+          <View style={[styles.mediaWrap, { height: gifSize + 12 }]}>
             {showGif ? (
               <Image
                 source={LISTEN_GIF}
@@ -273,32 +274,23 @@ export default function VoiceSearchDialog() {
             {statusSubtitle(phase, recorderState.durationMillis, errorMsg)}
           </Text>
 
-          {/* Intent & AI Response Summary Box */}
+          {/* Concise Intent Box ("Looking for X, Y") */}
           {result ? (
             <View style={styles.intentCard}>
-              <View style={styles.intentHeaderRow}>
-                <MaterialCommunityIcons name="target" size={16} color={colors.primary} />
-                <Text style={styles.intentLabel}>Intent</Text>
-                {result.language ? (
-                  <View style={styles.langBadge}>
-                    <Text style={styles.langBadgeText}>
-                      {String(result.language).toUpperCase()}
-                    </Text>
-                  </View>
-                ) : null}
+              <View style={styles.intentRow}>
+                <MaterialCommunityIcons name="magnify" size={16} color={colors.primary} />
+                <Text style={styles.intentPrefix}>Looking for:</Text>
+                <Text style={styles.intentQueryText} numberOfLines={1}>
+                  {result.query || 'Health Products'}
+                </Text>
               </View>
-
-              <Text style={styles.intentQueryText}>
-                “{result.query || result.transcript}”
-              </Text>
-
               {result.reply ? (
                 <Text style={styles.intentReplyText}>{result.reply}</Text>
               ) : null}
             </View>
           ) : null}
 
-          {/* Results List */}
+          {/* Results List - Wider & Roomier */}
           {isResults && result ? (
             result.products.length > 0 ? (
               <ScrollView
@@ -317,15 +309,15 @@ export default function VoiceSearchDialog() {
               </ScrollView>
             ) : (
               <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons name="magnify-close" size={40} color={colors.textTertiary} />
+                <MaterialCommunityIcons name="magnify-close" size={38} color={colors.textTertiary} />
                 <Text style={styles.emptyText}>
-                  No matching products found. Try describing what you need.
+                  No matching products found. Try asking for a specific medicine or symptom.
                 </Text>
               </View>
             )
           ) : null}
 
-          {/* Feedback Toast */}
+          {/* Toast Notification */}
           {addedId !== null && (
             <View style={styles.toastBox}>
               <MaterialCommunityIcons name="check-circle" size={16} color={colors.surface} />
@@ -333,7 +325,7 @@ export default function VoiceSearchDialog() {
             </View>
           )}
 
-          {/* Action Controls */}
+          {/* Action Button */}
           <View style={styles.controls}>
             {isListening ? (
               <TouchableOpacity
@@ -373,9 +365,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    paddingHorizontal: spacing['2xl'],
-    paddingTop: spacing.xl,
-    maxHeight: '90%',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    maxHeight: '92%',
     ...shadows.lg,
   },
   headerRow: {
@@ -383,7 +375,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brand: {
     fontFamily: fonts.headingBold,
     fontSize: fontSize.md,
@@ -401,76 +393,62 @@ const styles = StyleSheet.create({
   mediaWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.md,
+    marginTop: spacing.xs,
   },
   statusTitle: {
     fontFamily: fonts.headingBold,
-    fontSize: fontSize.xl,
+    fontSize: fontSize.lg,
     color: colors.textPrimary,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: 2,
   },
   statusSubtitle: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: 11,
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: 2,
-    lineHeight: 18,
+    lineHeight: 16,
   },
   intentCard: {
     backgroundColor: colors.primarySoft,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginTop: spacing.md,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(18, 70, 56, 0.1)',
+    borderColor: 'rgba(18, 70, 56, 0.12)',
   },
-  intentHeaderRow: {
+  intentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
   },
-  intentLabel: {
+  intentPrefix: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.xs,
     color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  langBadge: {
-    backgroundColor: colors.surface,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginLeft: 'auto',
-  },
-  langBadgeText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 9,
-    color: colors.textSecondary,
   },
   intentQueryText: {
-    fontFamily: fonts.heading,
-    fontSize: fontSize.md,
+    flex: 1,
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.sm,
     color: colors.textPrimary,
-    lineHeight: 22,
   },
   intentReplyText: {
     fontFamily: fonts.body,
-    fontSize: fontSize.xs,
+    fontSize: 11,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: 3,
     lineHeight: 16,
   },
   results: {
-    marginTop: spacing.md,
-    maxHeight: 280,
+    marginTop: spacing.sm,
+    maxHeight: 330,
   },
   resultsContent: {
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
+    gap: spacing.xs + 2,
+    paddingBottom: spacing.xs,
   },
   productCard: {
     flexDirection: 'row',
@@ -478,18 +456,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.xl,
-    padding: spacing.sm + 2,
+    borderRadius: radius.lg,
+    padding: spacing.sm,
     gap: spacing.md,
     ...shadows.sm,
   },
   productImage: {
-    width: 60,
-    height: 60,
+    width: 58,
+    height: 58,
     borderRadius: radius.md,
     backgroundColor: colors.surfaceAlt,
   },
   productInfo: { flex: 1 },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   productCategory: {
     fontFamily: fonts.bodyMedium,
     fontSize: 10,
@@ -497,28 +480,22 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  ratingText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    color: colors.textPrimary,
+  },
   productTitle: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.sm,
     color: colors.textPrimary,
-    lineHeight: 18,
+    lineHeight: 17,
     marginTop: 2,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 2,
-  },
-  ratingText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 11,
-    color: colors.textPrimary,
-  },
-  reviewsText: {
-    fontFamily: fonts.body,
-    fontSize: 10,
-    color: colors.textTertiary,
   },
   productPrice: {
     fontFamily: fonts.headingBold,
@@ -537,14 +514,14 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.lg,
   },
   emptyText: {
     fontFamily: fonts.body,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   toastBox: {
     flexDirection: 'row',
@@ -552,7 +529,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    paddingVertical: spacing.xs,
     borderRadius: radius.full,
     alignSelf: 'center',
     marginTop: spacing.xs,
@@ -563,7 +540,7 @@ const styles = StyleSheet.create({
     color: colors.surface,
   },
   controls: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
   },
   primaryButton: {
     flexDirection: 'row',

@@ -113,75 +113,79 @@ export default function OrderDetailScreen() {
   const isCancelled = order.status === 'cancelled';
   const canCancel = ['pending_payment', 'confirmed'].includes(order.status);
 
+  const createdDate = new Date(order.created_at);
+  const deliveryDate = new Date(createdDate.getTime() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  const totalItemCount = (order.order_items || []).reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'AuraMart',
-          headerTransparent: true,
-          headerShadowVisible: false,
-          headerTitleStyle: { fontFamily: fonts.headingBold, fontSize: fontSize.xl, color: colors.primary },
-          headerTintColor: colors.textPrimary,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={{
-                marginLeft: spacing.md,
-                width: 38,
-                height: 38,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: radius.full,
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity style={{
-                marginRight: spacing.md,
-                width: 38,
-                height: 38,
-                justifyContent: 'center',
-                alignItems: 'center',
-                backgroundColor: colors.surfaceAlt,
-                borderRadius: radius.full,
-              }}>
-              <MaterialCommunityIcons name="share-variant-outline" size={20} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
-
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 60 }]} showsVerticalScrollIndicator={false}>
-        {/* Back to orders shortcut */}
+      {/* Custom Safe Header Bar */}
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 12) + spacing.xs }]}>
         <TouchableOpacity
-          style={styles.backToOrdersRow}
-          onPress={() => router.push('/(tabs)/orders')}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)/orders');
+            }
+          }}
+          style={styles.headerBackRow}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <MaterialCommunityIcons name="chevron-left" size={20} color={colors.primary} />
-          <Text style={styles.backToOrdersText}>Back to Orders</Text>
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.primary} />
+          <Text style={styles.headerBackText}>Back to Orders</Text>
         </TouchableOpacity>
 
-        {/* Order Header Card */}
+        <Text style={styles.headerTitle}>Order #{order.id}</Text>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 20) + spacing['3xl'] },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Estimated Delivery Banner Card */}
+        <View style={styles.deliveryCard}>
+          <View style={styles.deliveryBadgeRow}>
+            <MaterialCommunityIcons name="truck-fast-outline" size={22} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.deliveryLabelText}>
+                {isCancelled ? 'Shipment Cancelled' : 'Estimated Delivery'}
+              </Text>
+              <Text style={styles.deliveryDateText}>
+                {isCancelled ? 'Order was cancelled' : `Delivering by ${deliveryDate}`}
+              </Text>
+            </View>
+            {!isCancelled && (
+              <View style={styles.onTimeBadge}>
+                <Text style={styles.onTimeText}>On Schedule</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.deliverySubtext}>
+            Express Health Courier · {totalItemCount} item{totalItemCount > 1 ? 's' : ''} in package
+          </Text>
+        </View>
+
+        {/* Order Header Summary */}
         <View style={styles.orderHeaderCard}>
           <View style={{ flex: 1 }}>
             <Text style={styles.orderIdText}>Order #{order.id}</Text>
             <Text style={styles.orderDateText}>
-              Placed on {new Date(order.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              Placed on {createdDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
             </Text>
           </View>
-          <View style={styles.statusPill}>
-            <Text style={styles.statusPillText}>{order.status.toUpperCase()}</Text>
+          <View style={[styles.statusPill, isCancelled && { backgroundColor: colors.errorSoft }]}>
+            <Text style={[styles.statusPillText, isCancelled && { color: colors.error }]}>
+              {order.status.toUpperCase()}
+            </Text>
           </View>
         </View>
 
@@ -220,11 +224,11 @@ export default function OrderDetailScreen() {
                       </Text>
                       {isActive && (
                         <Text style={styles.stageSubtitle}>
-                          {stage.key === 'pending_payment' && 'Your order has been confirmed'}
-                          {stage.key === 'confirmed' && `Payment of ₹${order.total_price} received`}
-                          {stage.key === 'processing' && 'Your order is being prepared'}
-                          {stage.key === 'shipped' && 'Package handed over to delivery partner'}
-                          {stage.key === 'delivered' && 'Package delivered to address'}
+                          {stage.key === 'pending_payment' && 'Your order has been placed successfully'}
+                          {stage.key === 'confirmed' && `Payment of ₹${order.total_price} verified`}
+                          {stage.key === 'processing' && 'Pharmacy team is packing your items'}
+                          {stage.key === 'shipped' && 'Handed over to courier delivery partner'}
+                          {stage.key === 'delivered' && 'Package delivered to your address'}
                         </Text>
                       )}
                     </View>
@@ -239,28 +243,26 @@ export default function OrderDetailScreen() {
         <View style={styles.addressCard}>
           <View style={styles.addressCardHeader}>
             <Text style={styles.addressCardTitle}>Delivery Address</Text>
-            <TouchableOpacity>
-              <Text style={styles.changeAddressText}>Change</Text>
-            </TouchableOpacity>
           </View>
-          <Text style={styles.addressName}>{(order as any).name || 'Customer'}</Text>
+          <Text style={styles.addressName}>{(order as any).name || user?.fullName || 'Customer'}</Text>
           <Text style={styles.addressSubtext}>
-            {order.address?.street ? `${order.address.street}, ${order.address.city}, ${order.address.state} - ${order.address.zip_code}` : 'Address details recorded on checkout'}
+            {order.address?.street ? `${order.address.street}, ${order.address.city}, ${order.address.state} - ${order.address.zip_code}` : 'Hehe, Bilaspur, Chhattisgarh - 495001'}
           </Text>
           <Text style={styles.addressPhone}>+91 {(order as any).phone || '9876543210'}</Text>
         </View>
 
-        {/* Order Items List */}
+        {/* Order Items & Product Delivery List */}
         <View style={styles.itemsCard}>
-          <Text style={styles.itemsCardTitle}>Order Items</Text>
+          <Text style={styles.itemsCardTitle}>Items in this Shipment ({totalItemCount})</Text>
           {(order.order_items || []).map((item) => (
             <View key={item.id} style={styles.itemRow}>
               <Image
                 source={{ uri: item.products?.image_url }}
                 style={styles.itemImage}
-                contentFit="contain"
+                contentFit="cover"
               />
               <View style={styles.itemDetails}>
+                <Text style={styles.itemCategory}>{item.products?.category || 'Healthcare'}</Text>
                 <Text style={styles.itemTitle} numberOfLines={2}>
                   {item.products?.title || 'Product'}
                 </Text>
@@ -298,16 +300,76 @@ export default function OrderDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { padding: spacing['2xl'], paddingBottom: 60 },
-  backToOrdersRow: {
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  backToOrdersText: {
+  headerBackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerBackText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: fontSize.sm,
     color: colors.primary,
+  },
+  headerTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+  },
+  scrollContent: { padding: spacing.lg, paddingBottom: 80 },
+  deliveryCard: {
+    backgroundColor: colors.primarySoft,
+    borderRadius: 20,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(18, 70, 56, 0.12)',
+    ...shadows.sm,
+  },
+  deliveryBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 6,
+  },
+  deliveryLabelText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  deliveryDateText: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    marginTop: 1,
+  },
+  onTimeBadge: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  onTimeText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 10,
+    color: colors.surface,
+  },
+  deliverySubtext: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
   },
   orderHeaderCard: {
     flexDirection: 'row',
@@ -475,6 +537,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceAlt,
   },
   itemDetails: { flex: 1 },
+  itemCategory: {
+    fontFamily: fonts.bodyMedium,
+    fontSize: 10,
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   itemTitle: {
     fontFamily: fonts.bodyMedium,
     fontSize: fontSize.sm,

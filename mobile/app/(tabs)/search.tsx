@@ -67,7 +67,7 @@ export default function SearchScreen() {
     setTimeout(() => inputRef.current?.focus(), 300);
   }, []);
 
-  // Tapping the animated search (GIF) tab opens the Gemini-style listening dialog
+  // Tapping the animated search (GIF) tab opens the Aura AI listening dialog
   useFocusEffect(
     useCallback(() => {
       openVoice();

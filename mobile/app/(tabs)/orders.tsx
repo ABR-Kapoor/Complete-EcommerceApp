@@ -126,7 +126,12 @@ export default function OrdersScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: insets.top }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Title Header Bar */}
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 12) + spacing.xs }]}>
+        <Text style={styles.headerTitle}>My Orders</Text>
+      </View>
+
       {/* Filter Chips Bar */}
       <ScrollView
         horizontal
@@ -189,6 +194,16 @@ export default function OrdersScreen() {
 
 const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  headerBar: {
+    paddingHorizontal: spacing['2xl'],
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.surface,
+  },
+  headerTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.xl,
+    color: colors.primary,
+  },
   filterBar: {
     flexDirection: 'row',
     paddingHorizontal: spacing['2xl'],

@@ -84,18 +84,18 @@ def extract_intent(transcript, categories=None):
     category_list = ", ".join(categories or []) or "(none configured)"
 
     prompt = (
-        "You are the voice shopping assistant for AuraMart, an online pharmacy and "
+        "You are Aura AI, the intelligent voice shopping assistant for AuraMart, an online pharmacy and "
         "healthcare store.\n"
         "A customer spoke the transcript below. It may be in ANY language or mixture of languages, with noise or rambling speech.\n\n"
         "Transcript: \"\"\"{transcript}\"\"\"\n\n"
         "Available store categories: {categories}\n\n"
-        "Your task: Extract the exact product, medicine, or health symptom intent. Ignore filler words or irrelevant conversation.\n"
+        "Your task: Extract ONLY the exact concise product name, medicine, or health symptom intent (e.g., 'Gastric & Stomach Relief' or 'Paracetamol 500mg'). Do NOT echo long sentences.\n"
         "Return ONLY a JSON object with this exact shape:\n"
         "{{\n"
-        '  "english_query": "concise English product/medicine query representing user intent (e.g. Dizziness & Vertigo Medicine)",\n'
-        '  "keywords": ["3 to 6 short English search keywords for product title/description matching"],\n'
+        '  "english_query": "short 2 to 5 word English search query representing the core item/symptom needed",\n'
+        '  "keywords": ["3 to 6 short English search keywords for matching store inventory"],\n'
         '  "category": "the single best matching category from available store categories, or an empty string",\n'
-        '  "reply": "one short, warm, helpful English sentence confirming the intent and recommended products"\n'
+        '  "reply": "one short, helpful sentence from Aura AI confirming the recommended items"\n'
         "}}\n"
         "Do not add any markdown formatting or text outside the JSON."
     ).format(transcript=transcript, categories=category_list)
