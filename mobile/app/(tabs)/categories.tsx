@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
@@ -80,13 +81,23 @@ export default function CategoriesScreen() {
           </TouchableOpacity>
         );
       }}
+      ListFooterComponent={
+        <View style={styles.vocalBannerContainer}>
+          <Image
+            source={require('../../assets/Vocal for Local Healthcare Delivery.png')}
+            style={styles.vocalBannerImage}
+            contentFit="contain"
+            transition={200}
+          />
+        </View>
+      }
     />
   );
 }
 
 const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
-  listContent: { padding: spacing['2xl'], paddingBottom: 130 },
+  listContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: 80 },
   categoryRowCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -126,5 +137,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textSecondary,
     marginTop: spacing.lg,
+  },
+  vocalBannerContainer: {
+    width: '100%',
+    marginTop: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vocalBannerImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radius.lg,
   },
 });

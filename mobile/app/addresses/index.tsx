@@ -206,12 +206,12 @@ export default function AddressScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  scrollContent: { padding: spacing['2xl'], paddingBottom: 60 },
+  scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: 40 },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    padding: spacing['2xl'],
-    marginBottom: spacing['2xl'],
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
     ...shadows.sm,
   },
   cardHeader: {

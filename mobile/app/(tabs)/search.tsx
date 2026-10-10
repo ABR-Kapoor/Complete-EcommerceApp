@@ -11,7 +11,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
@@ -20,7 +20,7 @@ import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { Product } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - spacing['2xl'] * 2 - spacing.md) / 2;
+const CARD_WIDTH = (SCREEN_WIDTH - spacing.md * 2 - spacing.md) / 2;
 
 export default function SearchScreen() {
   const router = useRouter();
@@ -66,13 +66,6 @@ export default function SearchScreen() {
     // Auto-focus on mount
     setTimeout(() => inputRef.current?.focus(), 300);
   }, []);
-
-  // Tapping the animated search (GIF) tab opens the Aura AI listening dialog
-  useFocusEffect(
-    useCallback(() => {
-      openVoice();
-    }, [openVoice])
-  );
 
   const renderProduct = useCallback(
     ({ item }: { item: Product }) => (
@@ -176,7 +169,7 @@ export default function SearchScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   searchHeader: {
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.lg,
     backgroundColor: colors.surface,
     borderBottomLeftRadius: 30,
@@ -205,7 +198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing['3xl'],
   },
-  listContent: { padding: spacing['2xl'], paddingBottom: 130 },
+  listContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: 80 },
   columnWrapper: { gap: spacing.md, marginBottom: spacing.md },
   productCard: {
     width: CARD_WIDTH,

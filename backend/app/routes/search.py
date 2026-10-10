@@ -73,6 +73,7 @@ async def voice_search(
         "language": stt["language"],
         "query": intent.get("english_query") or transcript,
         "reply": intent.get("reply") or "",
+        "issues": intent.get("issues") or [],
         "products": matches,
     }
 
@@ -97,5 +98,6 @@ def text_search(payload: TextQuery):
         "language": "eng",
         "query": intent.get("english_query") or payload.query.strip(),
         "reply": intent.get("reply") or "",
+        "issues": intent.get("issues") or [],
         "products": matches,
     }

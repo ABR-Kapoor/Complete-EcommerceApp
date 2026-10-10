@@ -1,5 +1,5 @@
 import { Tabs, useRouter } from 'expo-router';
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -29,6 +29,19 @@ function HeaderCartButton() {
       <MaterialCommunityIcons name="shopping-outline" size={24} color={colors.textPrimary} />
       <CartBadge />
     </TouchableOpacity>
+  );
+}
+
+const BRAND_LOGO = require('../../assets/AuraMart-transparent-Logo.png');
+
+function HeaderLogo() {
+  return (
+    <Image
+      source={BRAND_LOGO}
+      style={styles.headerLogo}
+      contentFit="contain"
+      accessibilityLabel="AuraMart"
+    />
   );
 }
 
@@ -83,11 +96,20 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
-          headerTitle: 'AuraMart',
-          headerTitleStyle: {
-            fontFamily: fonts.headingBold,
-            fontSize: fontSize.xl,
-            color: colors.primary,
+          headerTitle: () => null,
+          headerLeft: () => (
+            <View style={styles.headerLeftContainer}>
+              <HeaderLogo />
+            </View>
+          ),
+          headerLeftContainerStyle: {
+            paddingLeft: 0,
+            marginLeft: 0,
+          },
+          headerRight: () => <HeaderCartButton />,
+          headerRightContainerStyle: {
+            paddingRight: 0,
+            marginRight: 0,
           },
           tabBarIcon: ({ color, focused }) => (
             <MaterialCommunityIcons 
@@ -170,7 +192,7 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   headerCartButton: {
-    marginRight: spacing.lg,
+    marginRight: spacing.sm,
     width: 44,
     height: 44,
     justifyContent: 'center',
@@ -221,5 +243,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     transform: [{ scale: 1.25 }],
+  },
+  headerLeftContainer: {
+    paddingLeft: spacing.xs,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  headerLogo: {
+    width: 155,
+    height: 42,
   },
 });

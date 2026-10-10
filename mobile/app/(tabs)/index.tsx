@@ -18,12 +18,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { productsService } from '../../services/products.service';
 import { useWishlistStore } from '../../store/wishlistStore';
 import { useCartStore } from '../../store/cartStore';
+import { useUserStore } from '../../store/userStore';
 import { useVoiceSearchStore } from '../../store/voiceSearchStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { Product, Category } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - spacing['2xl'] * 2 - spacing.md) / 2;
+const PAGE_PADDING = spacing.md;
+const CARD_WIDTH = (SCREEN_WIDTH - PAGE_PADDING * 2 - spacing.md) / 2;
 const DEAL_CARD_WIDTH = 150;
 
 function timeGreeting(): string {
@@ -245,25 +247,38 @@ export default function HomeScreen() {
     loadData();
   }, [loadData]);
 
+  const profile = useUserStore((s) => s.profile);
+  const fetchProfile = useUserStore((s) => s.fetchProfile);
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile(user.id);
+    }
+  }, [user?.id, fetchProfile]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData();
-  }, [loadData]);
-
-  const greeting = user?.firstName ? `Hi, ${user.firstName}` : 'Good health starts here';
+    if (user?.id) {
+      fetchProfile(user.id);
+    }
+  }, [loadData, user?.id, fetchProfile]);
+  const avatarUrl = profile?.avatar_url || user?.imageUrl;
+  const firstName = profile?.name ? profile.name.split(' ')[0] : (user?.firstName || '');
+  const greeting = firstName ? `Hi, ${firstName}` : 'Good health starts here';
 
   if (loading) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Skeleton greeting */}
-        <View style={{ paddingHorizontal: spacing['2xl'], marginVertical: spacing.md }}>
+        <View style={{ paddingHorizontal: PAGE_PADDING, marginVertical: spacing.md }}>
           <View style={{ width: 200, height: 24, backgroundColor: colors.skeleton, borderRadius: 6 }} />
           <View style={{ width: 160, height: 14, backgroundColor: colors.skeleton, borderRadius: 4, marginTop: 8 }} />
         </View>
         {/* Skeleton search */}
-        <View style={[styles.searchBar, { backgroundColor: colors.skeleton }]} />
+        <View style={[styles.searchBar, { backgroundColor: colors.skeleton, marginHorizontal: PAGE_PADDING }]} />
         {/* Skeleton categories */}
-        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: spacing['2xl'], marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: PAGE_PADDING, marginBottom: 24 }}>
           {[1, 2, 3, 4].map((i) => (
             <View key={i} style={{ width: 72, height: 88, backgroundColor: colors.skeleton, borderRadius: radius.md }} />
           ))}
@@ -285,7 +300,7 @@ export default function HomeScreen() {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top > 0 ? insets.top : spacing.xs }]}
+      contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -310,15 +325,17 @@ export default function HomeScreen() {
           activeOpacity={0.85}
           accessibilityLabel="Open profile settings"
         >
-          {user?.imageUrl ? (
+          {avatarUrl ? (
             <Image
-              source={{ uri: user.imageUrl }}
+              source={{ uri: avatarUrl }}
               style={styles.greetingAvatar}
               contentFit="cover"
               transition={200}
             />
           ) : (
-            <MaterialCommunityIcons name="account" size={22} color={colors.primary} />
+            <View style={styles.greetingAvatarFallback}>
+              <MaterialCommunityIcons name="account" size={24} color={colors.primary} />
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -332,7 +349,7 @@ export default function HomeScreen() {
           accessibilityLabel="Search products"
         >
           <MaterialCommunityIcons name="magnify" size={20} color={colors.textSecondary} />
-          <Text style={styles.searchPlaceholder}>Search medicines, health essentials...</Text>
+          <Text style={styles.searchPlaceholder}>Search or tell your issues   👉🏻</Text>
           <TouchableOpacity
             style={styles.heroMicBtn}
             onPress={(e) => {
@@ -431,6 +448,16 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* Vocal for Local Healthcare Delivery Banner */}
+      <View style={styles.vocalBannerContainer}>
+        <Image
+          source={require('../../assets/Vocal for Local Healthcare Delivery.png')}
+          style={styles.vocalBannerImage}
+          contentFit="contain"
+          transition={200}
+        />
+      </View>
+
       {/* Trust Section */}
       <View style={styles.trustSection}>
         <View style={styles.trustItem}>
@@ -449,17 +476,15 @@ export default function HomeScreen() {
           <Text style={styles.trustItemSub}>Across India</Text>
         </View>
       </View>
-
-      <View style={{ height: spacing['4xl'] }} />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { paddingBottom: 140, paddingTop: 0 },
+  scrollContent: { paddingBottom: 80, paddingTop: 0 },
   searchBarWrapper: {
-    marginHorizontal: spacing['2xl'],
+    marginHorizontal: PAGE_PADDING,
     marginTop: 6,
     marginBottom: spacing.md,
   },
@@ -494,7 +519,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: PAGE_PADDING,
     marginTop: spacing.xs,
     marginBottom: 4,
   },
@@ -515,11 +540,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   greetingAvatarBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.surface,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
@@ -530,8 +555,15 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  greetingAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: colors.primarySoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   dealScrollContent: {
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: PAGE_PADDING,
     gap: spacing.md,
     marginBottom: spacing.xl,
   },
@@ -585,7 +617,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: PAGE_PADDING,
     marginBottom: spacing.md,
     marginTop: spacing.lg,
   },
@@ -600,7 +632,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   categoryScrollContent: {
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: PAGE_PADDING,
     gap: spacing.lg,
     marginBottom: spacing.xl,
   },
@@ -629,7 +661,7 @@ const styles = StyleSheet.create({
   },
   filterChipsRow: {
     flexDirection: 'row',
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: PAGE_PADDING,
     gap: spacing.sm,
     marginBottom: spacing.lg,
   },
@@ -655,13 +687,13 @@ const styles = StyleSheet.create({
     color: colors.surface,
   },
   horizontalProductScroll: {
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: PAGE_PADDING,
     marginBottom: spacing.xl,
   },
   productGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: PAGE_PADDING,
     gap: spacing.md,
     rowGap: spacing.lg,
   },
@@ -779,13 +811,26 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.xs,
   },
+  vocalBannerContainer: {
+    width: '100%',
+    paddingHorizontal: spacing.xs,
+    marginTop: spacing.xl,
+    marginBottom: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vocalBannerImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radius.lg,
+  },
   trustSection: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingVertical: spacing.xl,
     paddingHorizontal: spacing.md,
-    marginHorizontal: spacing['2xl'],
-    marginTop: spacing['2xl'],
+    marginHorizontal: PAGE_PADDING,
+    marginTop: spacing.xl,
     backgroundColor: colors.surface,
     borderRadius: 20,
     borderWidth: 1,

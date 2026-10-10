@@ -67,7 +67,7 @@ export default function CheckoutSuccessScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface, justifyContent: 'center' },
-  content: { paddingHorizontal: spacing['3xl'], alignItems: 'center' },
+  content: { paddingHorizontal: spacing.md, alignItems: 'center' },
   iconCircle: {
     width: 80,
     height: 80,

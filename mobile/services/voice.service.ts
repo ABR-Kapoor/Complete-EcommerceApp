@@ -2,12 +2,26 @@ import { Platform } from 'react-native';
 import api from './api';
 import { Product } from '../types';
 
+export interface VoiceSearchIssue {
+  id: string;
+  title: string;
+  query?: string;
+  category?: string;
+  icon?: string;
+  tip?: string;
+}
+
+export interface VoiceSearchProduct extends Product {
+  matched_issue_ids?: string[];
+}
+
 export interface VoiceSearchResult {
   transcript: string;
   language?: string | null;
   query: string;
   reply: string;
-  products: Product[];
+  issues?: VoiceSearchIssue[];
+  products: VoiceSearchProduct[];
 }
 
 function guessMime(uri: string): { name: string; type: string } {

@@ -19,6 +19,7 @@ interface UserState {
   fetchAddress: (userId: string) => Promise<void>;
   saveAddress: (userId: string, address: Omit<Address, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => Promise<void>;
   updateProfile: (userId: string, updates: Partial<Pick<UserProfile, 'name' | 'phone' | 'email'>>) => Promise<void>;
+  setAvatarUrl: (avatarUrl: string) => void;
   clearUser: () => void;
 }
 
@@ -75,6 +76,11 @@ export const useUserStore = create<UserState>((set) => ({
       set({ error: err.message });
     }
   },
+
+  setAvatarUrl: (avatarUrl: string) =>
+    set((state) => ({
+      profile: state.profile ? { ...state.profile, avatar_url: avatarUrl } : null,
+    })),
 
   clearUser: () => set({ profile: null, address: null, loading: false, error: null }),
 }));

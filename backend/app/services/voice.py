@@ -10,14 +10,15 @@ GEMINI_URL_TEMPLATE = (
 )
 
 DEFAULT_STT_MODEL = "scribe_v2"
-DEFAULT_GEMINI_MODEL = "gemini-flash-latest"
+DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 
 STOPWORDS = {
     "the", "a", "an", "and", "or", "of", "for", "to", "in", "on", "at", "with",
     "i", "me", "my", "we", "you", "is", "are", "be", "want", "need", "looking",
     "show", "find", "get", "buy", "please", "some", "any", "can", "could",
     "would", "like", "have", "has", "do", "does", "it", "this", "that", "these",
-    "those", "给我", "我想", "买", "找", "的", "了", "个", "请", "我要",
+    "those", "also", "very", "much", "since", "yesterday", "today", "tomorrow",
+    "给我", "我想", "买", "找", "的", "了", "个", "请", "我要",
 }
 
 
@@ -66,38 +67,90 @@ def transcribe_audio(filename, data, content_type=None, language_code=None):
 
 
 def _fallback_intent(transcript):
+    kws = _simple_keywords(transcript)
+    kw_str = " ".join(kws[:3]) if kws else transcript
+
+    fallback_issues = [
+        {
+            "id": "issue-1",
+            "title": f"Targeted Relief: {kw_str.title() if kw_str else 'Primary Need'}",
+            "query": kw_str or transcript,
+            "category": "OTC Medicines",
+            "icon": "pill",
+            "tip": "Targeted remedies for primary symptom comfort.",
+        },
+        {
+            "id": "issue-2",
+            "title": "Pain & Inflammation Support",
+            "query": "pain relief balm analgesic",
+            "category": "OTC Medicines",
+            "icon": "emoticon-sick-outline",
+            "tip": "Soothing comfort for body aches and tenderness.",
+        },
+        {
+            "id": "issue-3",
+            "title": "Health Monitoring & Diagnostics",
+            "query": "health monitoring thermometer kit",
+            "category": "Health Monitoring",
+            "icon": "medical-bag",
+            "tip": "Keep track of vital indicators during recovery.",
+        },
+        {
+            "id": "issue-4",
+            "title": "Immunity & Fast Recovery",
+            "query": "immunity vitamins personal care",
+            "category": "Personal Care",
+            "icon": "shield-plus-outline",
+            "tip": "Boost hydration, nutrients, and immune defenses.",
+        },
+    ]
+
     return {
         "english_query": transcript,
-        "keywords": _simple_keywords(transcript),
-        "category": "",
-        "reply": f'Searching for "{transcript}".',
+        "keywords": kws,
+        "category": "OTC Medicines",
+        "reply": f"Aura AI compiled your symptoms into 4 key health issues.",
+        "issues": fallback_issues,
     }
 
 
 def extract_intent(transcript, categories=None):
-    """Use Gemini to translate/understand the transcript and return a search intent."""
+    """Use Gemini to translate/understand the transcript and compile into 3-4 specific issues."""
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return _fallback_intent(transcript)
 
     model = os.getenv("GEMINI_MODEL", DEFAULT_GEMINI_MODEL)
-    category_list = ", ".join(categories or []) or "(none configured)"
+    category_list = ", ".join(categories or []) or "OTC Medicines, Personal Care, Health Monitoring, Healthcare Devices, First Aid"
 
     prompt = (
-        "You are Aura AI, the intelligent voice shopping assistant for AuraMart, an online pharmacy and "
-        "healthcare store.\n"
-        "A customer spoke the transcript below. It may be in ANY language or mixture of languages, with noise or rambling speech.\n\n"
-        "Transcript: \"\"\"{transcript}\"\"\"\n\n"
+        "You are Aura AI, the intelligent voice shopping and clinical triage assistant for AuraMart, an online pharmacy and healthcare store.\n"
+        "A customer spoke the transcript below describing their symptoms, health problems, or medical requests. "
+        "It may be in ANY language (English, Hindi, Bengali, Hinglish, etc.) or a mixture of languages, with casual or rambling speech.\n\n"
+        "Customer Transcript: \"\"\"{transcript}\"\"\"\n\n"
         "Available store categories: {categories}\n\n"
-        "Your task: Extract ONLY the exact concise product name, medicine, or health symptom intent (e.g., 'Gastric & Stomach Relief' or 'Paracetamol 500mg'). Do NOT echo long sentences.\n"
-        "Return ONLY a JSON object with this exact shape:\n"
+        "YOUR CORE TASK:\n"
+        "1. Compile and synthesize the customer's natural speech into EXACTLY 3 to 4 specific, actionable health issues or shopping dimensions.\n"
+        "2. Even if the customer's sentence is brief or focused on one symptom (e.g. 'I have a fever'), break it down into 3 to 4 complementary healthcare issues to search for (such as: 1. Primary Symptom Relief, 2. Secondary/Associated Discomfort, 3. Health Monitoring / Vital Check, 4. Immunity / Hydration / Recovery).\n"
+        "3. Provide specific search terms for each of the 3-4 issues so the store can find exact matching remedies.\n"
+        "4. Return ONLY a valid JSON object matching this exact schema:\n"
         "{{\n"
-        '  "english_query": "short 2 to 5 word English search query representing the core item/symptom needed",\n'
-        '  "keywords": ["3 to 6 short English search keywords for matching store inventory"],\n'
-        '  "category": "the single best matching category from available store categories, or an empty string",\n'
-        '  "reply": "one short, helpful sentence from Aura AI confirming the recommended items"\n'
+        '  "english_query": "short 2 to 5 word English search query representing the core symptoms",\n'
+        '  "keywords": ["short English search keywords for matching store inventory"],\n'
+        '  "category": "the single best overall matching store category from the available categories list",\n'
+        '  "reply": "one warm, caring, concise sentence from Aura AI confirming the 3-4 specific issues identified",\n'
+        '  "issues": [\n'
+        "    {{\n"
+        '      "id": "issue-1",\n'
+        '      "title": "Concise issue summary (e.g. High Fever & Chills)",\n'
+        '      "query": "2 to 4 search terms for this specific issue (e.g. fever paracetamol dolo)",\n'
+        '      "category": "matching store category",\n'
+        '      "icon": "MaterialCommunityIcons name like thermometer, pill, emoticon-sick-outline, stomach, medical-bag, shield-plus-outline, bandage, heart-pulse, water",\n'
+        '      "tip": "Short 1-line guidance or recovery tip for this issue"\n'
+        "    }}\n"
+        "  ]\n"
         "}}\n"
-        "Do not add any markdown formatting or text outside the JSON."
+        "CRITICAL: The 'issues' list MUST contain between 3 and 4 items. Do not include markdown code fences or any text outside the JSON."
     ).format(transcript=transcript, categories=category_list)
 
     body = {
@@ -120,17 +173,48 @@ def extract_intent(transcript, categories=None):
             return _fallback_intent(transcript)
 
         payload = response.json()
-        text = payload["candidates"][0]["content"]["parts"][0]["text"]
+        candidates = payload.get("candidates") or []
+        if not candidates:
+            return _fallback_intent(transcript)
+
+        text = candidates[0]["content"]["parts"][0]["text"]
         parsed = _parse_json(text)
         if not isinstance(parsed, dict):
             return _fallback_intent(transcript)
 
         keywords = parsed.get("keywords") or _simple_keywords(transcript)
+        issues = parsed.get("issues") or []
+
+        # Ensure valid list of 3-4 issues
+        valid_issues = []
+        for idx, issue in enumerate(issues[:4], start=1):
+            if isinstance(issue, dict) and issue.get("title"):
+                valid_issues.append({
+                    "id": str(issue.get("id") or f"issue-{idx}"),
+                    "title": str(issue.get("title")),
+                    "query": str(issue.get("query") or issue.get("title")),
+                    "category": str(issue.get("category") or ""),
+                    "icon": str(issue.get("icon") or "pill"),
+                    "tip": str(issue.get("tip") or "Targeted remedy for symptom relief."),
+                })
+
+        # If model returned fewer than 3 issues, pad with sensible recovery items
+        if len(valid_issues) < 3:
+            fallback = _fallback_intent(transcript)["issues"]
+            for f_issue in fallback:
+                if len(valid_issues) >= 4:
+                    break
+                if not any(v["title"].lower() == f_issue["title"].lower() for v in valid_issues):
+                    f_issue_copy = dict(f_issue)
+                    f_issue_copy["id"] = f"issue-{len(valid_issues) + 1}"
+                    valid_issues.append(f_issue_copy)
+
         return {
             "english_query": parsed.get("english_query") or transcript,
             "keywords": [str(k) for k in keywords if str(k).strip()],
             "category": parsed.get("category") or "",
-            "reply": parsed.get("reply") or f"Searching for {parsed.get('english_query') or transcript}.",
+            "reply": parsed.get("reply") or f"Aura AI compiled your symptoms into {len(valid_issues)} key issues.",
+            "issues": valid_issues,
         }
     except Exception as exc:  # noqa: BLE001 - degrade gracefully
         print(f"Gemini intent error: {exc}")
@@ -156,16 +240,27 @@ def _parse_json(text):
         return None
 
 
-def rank_products(products, intent, limit=12):
-    """Score products against the intent. Returns most relevant products first."""
+def rank_products(products, intent, limit=16):
+    """Score products against the intent and tag each product with matching issue IDs."""
     keywords = [str(k).lower() for k in (intent.get("keywords") or []) if str(k).strip()]
     query = str(intent.get("english_query") or "").lower()
     category = str(intent.get("category") or "").lower()
+    issues = intent.get("issues") or []
+
+    # Collect tokens per issue
+    issue_token_map = {}
+    for issue in issues:
+        iss_id = issue.get("id")
+        iss_tokens = set(re.findall(r"[\w]+", (issue.get("query") or "").lower(), flags=re.UNICODE))
+        iss_tokens.update(re.findall(r"[\w]+", (issue.get("title") or "").lower(), flags=re.UNICODE))
+        issue_token_map[iss_id] = {t for t in iss_tokens if len(t) > 2 and t not in STOPWORDS}
 
     tokens = set(keywords)
     tokens.update(
         t for t in re.findall(r"[\w]+", query, flags=re.UNICODE) if len(t) > 2 and t not in STOPWORDS
     )
+    for iss_tokens in issue_token_map.values():
+        tokens.update(iss_tokens)
 
     scored = []
     for product in products:
@@ -186,8 +281,48 @@ def rank_products(products, intent, limit=12):
         if category and category in product_category:
             score += 4
 
+        # Compute matched issues
+        matched_issue_ids = []
+        for issue in issues:
+            iss_id = issue.get("id")
+            iss_cat = str(issue.get("category") or "").lower()
+            iss_tokens = issue_token_map.get(iss_id, set())
+
+            issue_match_score = 0
+            for t in iss_tokens:
+                if t in title:
+                    issue_match_score += 4
+                if product_category and t in product_category:
+                    issue_match_score += 2
+                if t in description:
+                    issue_match_score += 1
+            if iss_cat and iss_cat in product_category:
+                issue_match_score += 2
+
+            if issue_match_score > 0:
+                matched_issue_ids.append(iss_id)
+
+        # Create augmented product dict
+        augmented_product = dict(product)
+        augmented_product["matched_issue_ids"] = matched_issue_ids
+
         if score > 0:
-            scored.append((score, product))
+            scored.append((score, augmented_product))
 
     scored.sort(key=lambda item: item[0], reverse=True)
-    return [product for _, product in scored[:limit]]
+
+    # Return top ranked products; if fewer than limit, include others
+    result_list = [product for _, product in scored[:limit]]
+
+    # Ensure every issue has at least some matching products if products exist
+    for issue in issues:
+        iss_id = issue.get("id")
+        has_match = any(iss_id in (p.get("matched_issue_ids") or []) for p in result_list)
+        if not has_match and result_list:
+            # Map top matching product or first product to this issue if appropriate
+            result_list[0]["matched_issue_ids"] = list(
+                set((result_list[0].get("matched_issue_ids") or []) + [iss_id])
+            )
+
+    return result_list
+

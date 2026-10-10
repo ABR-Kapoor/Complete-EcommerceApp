@@ -33,6 +33,23 @@ export const usersService = {
     return data;
   },
 
+  async uploadAvatarFile(userId: string, fileUri: string, mimeType: string = 'image/jpeg'): Promise<{ url: string }> {
+    const formData = new FormData();
+    const filename = fileUri.split('/').pop() || `avatar_${Date.now()}.jpg`;
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type: mimeType,
+    } as any);
+
+    const { data } = await api.post(`/api/users/${userId}/avatar-upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
   async getAddress(userId: string): Promise<Address | null> {
     const { data } = await api.get(`/api/users/${userId}/address`);
     return data && Object.keys(data).length > 0 ? data : null;

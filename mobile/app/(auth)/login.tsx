@@ -15,6 +15,7 @@ import { useSignIn, useOAuth } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
 import { getClerkErrorMessage } from '../../services/clerkError';
 
@@ -88,12 +89,15 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Curved Green Background */}
+        {/* Top Curved Green Background with Brand Logo */}
         <Animated.View entering={FadeInDown.duration(800).springify()} style={styles.topCurvedSection}>
           <View style={styles.topCurvedBackground} />
-          {/* We use an icon as a placeholder for the illustration */}
           <View style={styles.illustrationPlaceholder}>
-            <MaterialCommunityIcons name="shopping" size={80} color="#FFFFFF" opacity={0.8} />
+            <Image
+              source={require('../../assets/AuraMart-transparent-Logo.png')}
+              style={styles.authBrandLogo}
+              contentFit="contain"
+            />
           </View>
         </Animated.View>
 
@@ -228,6 +232,19 @@ const styles = StyleSheet.create({
   },
   illustrationPlaceholder: {
     marginTop: 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.full,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  authBrandLogo: {
+    width: 170,
+    height: 48,
   },
   formContainer: {
     paddingHorizontal: spacing['2xl'],

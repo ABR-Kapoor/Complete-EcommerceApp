@@ -150,7 +150,7 @@ export default function CartScreen() {
         renderItem={({ item }) => <CartItemCard item={item} />}
         contentContainerStyle={[
           styles.listContent,
-          { paddingBottom: items.length > 0 ? 180 + bottomInset : spacing.xl },
+          { paddingBottom: items.length > 0 ? 110 + bottomInset : spacing.md },
         ]}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.surface,
   },
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.error,
   },
-  listContent: { paddingHorizontal: spacing['2xl'], paddingBottom: 140 },
+  listContent: { paddingHorizontal: spacing.md, paddingBottom: 110 },
   cartItem: {
     flexDirection: 'row',
     backgroundColor: colors.surface,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: colors.surface,
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     borderTopWidth: 1,

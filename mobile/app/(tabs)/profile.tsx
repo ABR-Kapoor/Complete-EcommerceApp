@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -70,7 +71,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const displayName = profile?.name || user?.firstName || 'Rohan';
+  const displayName = profile?.name || user?.fullName || user?.firstName || 'User';
   const avatarUrl = profile?.avatar_url || user?.imageUrl;
 
   return (
@@ -151,7 +152,7 @@ export default function ProfileScreen() {
           icon="help-circle-outline"
           label="Help & Support"
           subtitle="Get assistance"
-          onPress={() => Alert.alert('Support', 'Contact us at support@auramart.com')}
+          onPress={() => Alert.alert('Support', 'Contact us at support@aurasutra.org')}
         />
       </View>
 
@@ -165,18 +166,31 @@ export default function ProfileScreen() {
         />
       </View>
 
+      {/* #goHealth Community Banner */}
+      <View style={styles.communityBannerContainer}>
+        <Image
+          source={require('../../assets/#goHealth_ Connected Care in Bhilai.png')}
+          style={styles.communityBannerImage}
+          contentFit="contain"
+          transition={200}
+        />
+      </View>
+
       {/* App info */}
       <Text style={styles.versionText}>AuraMart v1.0.0</Text>
-      <Text style={styles.versionSubtext}>Part of the AuraSutra ecosystem</Text>
-
-      <View style={{ height: spacing['4xl'] }} />
+      <TouchableOpacity
+        onPress={() => Linking.openURL('https://www.aurasutra.org')}
+        accessibilityLabel="Open AuraSutra website"
+      >
+        <Text style={[styles.versionSubtext, styles.versionLink]}>Part of the AuraSutra ecosystem</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { padding: spacing['2xl'], paddingBottom: 140 },
+  scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: 80 },
   profileHeaderCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -263,5 +277,21 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     marginTop: 2,
+  },
+  versionLink: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
+  communityBannerContainer: {
+    width: '100%',
+    marginTop: spacing.xl,
+    marginBottom: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  communityBannerImage: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radius.lg,
   },
 });

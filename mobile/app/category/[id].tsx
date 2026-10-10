@@ -16,7 +16,7 @@ import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { Product } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - spacing['2xl'] * 2 - spacing.md) / 2;
+const CARD_WIDTH = (SCREEN_WIDTH - spacing.md * 2 - spacing.md) / 2;
 
 export default function CategoryProductsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing['3xl'],
   },
-  listContent: { padding: spacing['2xl'], paddingBottom: spacing['4xl'] },
+  listContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: 40 },
   columnWrapper: { gap: spacing.md, marginBottom: spacing.md },
   productCard: {
     width: CARD_WIDTH,

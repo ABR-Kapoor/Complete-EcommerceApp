@@ -240,7 +240,7 @@ export default function OrdersScreen() {
         data={filteredOrders}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <OrderCard order={item} />}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 75 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   filterScrollContent: {
-    paddingHorizontal: spacing['2xl'],
+    paddingHorizontal: spacing.md,
     gap: spacing.sm,
     alignItems: 'center',
   },
@@ -344,7 +344,8 @@ const styles = StyleSheet.create({
     color: colors.surface,
   },
   listContent: {
-    padding: spacing['2xl'],
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   orderCard: {
     backgroundColor: colors.surface,
