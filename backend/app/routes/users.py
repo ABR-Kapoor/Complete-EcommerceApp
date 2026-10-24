@@ -86,17 +86,25 @@ def get_user(user_id: str):
 
 @router.get("/{user_id}/address")
 def get_user_address(user_id: str):
-    """Get saved address for user"""
+    """Get saved address for user including phone number"""
     client = get_supabase_admin()
     try:
         data = client.table("addresses").select("*").eq("user_id", user_id).maybe_single().execute()
-        return data.data or {}
+        addr_dict = data.data or {}
+        if addr_dict:
+            try:
+                user_res = client.table("users").select("phone").eq("id", user_id).maybe_single().execute()
+                if user_res and user_res.data and user_res.data.get("phone"):
+                    addr_dict["phone"] = user_res.data["phone"]
+            except Exception as pe:
+                print(f"Address phone hydration notice: {pe}")
+        return addr_dict
     except Exception:
         return {}
 
 @router.post("/{user_id}/address")
 def save_user_address(user_id: str, address: Dict[str, Any] = Body(...)):
-    """Save or update user shipping address"""
+    """Save or update user shipping address and contact phone"""
     client = get_supabase_admin()
     try:
         # Preparation: Only include columns that EXIST in the addresses table
@@ -108,6 +116,14 @@ def save_user_address(user_id: str, address: Dict[str, Any] = Body(...)):
             "state": address.get("state"),
             "zip_code": str(address.get("zip_code") or "")
         }
+
+        # Update contact phone in users table if passed
+        phone = address.get("phone")
+        if phone and str(phone).strip():
+            try:
+                client.table("users").update({"phone": str(phone).strip()}).eq("id", user_id).execute()
+            except Exception as pe:
+                print(f"Phone update notice in save_user_address: {pe}")
         
         # Robust Save: Check if exists using user_id as PK
         res_existing = client.table("addresses").select("user_id").eq("user_id", user_id).maybe_single().execute()

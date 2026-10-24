@@ -97,3 +97,16 @@ def remove_from_cart(user_id: str, cart_item_id: int):
         return {"status": "ok"}
     except Exception as e:
         return {"error": str(e)}
+
+@router.delete("/{user_id}/clear")
+def clear_user_cart(user_id: str):
+    try:
+        client = get_supabase_admin()
+        cart_res = client.table("carts").select("id").eq("user_id", user_id).maybe_single().execute()
+        if cart_res and cart_res.data:
+            client.table("cart_items").delete().eq("cart_id", cart_res.data["id"]).execute()
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Error clearing user cart: {e}")
+        return {"error": str(e)}
+

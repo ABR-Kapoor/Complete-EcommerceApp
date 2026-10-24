@@ -53,6 +53,17 @@ def get_product_reviews(product_id: int):
         return data.data or []
     except: return []
 
+@router.get("/user/{user_id}")
+def get_user_reviews(user_id: str):
+    """Fetch all reviews created by a specific user with product details"""
+    try:
+        client = get_supabase_admin()
+        data = client.table("reviews").select("*, products(id, title, image_url, price)").eq("user_id", user_id).order("created_at", desc=True).execute()
+        return data.data or []
+    except Exception as e:
+        print(f"Error fetching reviews for user {user_id}: {e}")
+        return []
+
 @router.get("/order/{order_id}")
 def get_order_reviews(order_id: int):
     client = get_supabase_admin()

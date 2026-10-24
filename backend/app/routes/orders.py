@@ -53,7 +53,8 @@ def create_order(data: dict = Body(...)):
         # 3. Create Main Order Record
         status = data.get("status")
         if not status:
-            status = "confirmed" if data.get("payment_method") == "COD" else "pending_payment"
+            is_paid = str(data.get("payment_method", "")).lower() == "razorpay" and bool(data.get("razorpay_payment_id"))
+            status = "confirmed" if (data.get("payment_method") in ["COD", "cod"] or is_paid) else "pending_payment"
 
         # verified columns: ['id', 'user_id', 'total_price', 'payment_method', 'status']
         order_payload = {
@@ -96,17 +97,22 @@ def create_order(data: dict = Body(...)):
         client.table("order_items").insert(formatted_items).execute()
 
         # 5. Create Payment Record (Normalization)
-        if data.get("payment_method") == "Razorpay":
+        if str(data.get("payment_method", "")).lower() == "razorpay":
             try:
                 payment_payload = {
                     "order_id": oid,
                     "amount": data.get("total_price", 0),
                     "status": "completed",
-                    "razorpay_id": data.get("razorpay_payment_id", "N/A") # You should pass this from frontend
+                    "razorpay_id": data.get("razorpay_payment_id", "N/A")
                 }
                 client.table("payments").insert(payment_payload).execute()
-            except Exception as pe:
-                print(f"Payment record creation failed: {pe}")
+        # 6. Automatically clear user cart items in DB
+        try:
+            cart_res = client.table("carts").select("id").eq("user_id", uid).maybe_single().execute()
+            if cart_res and cart_res.data:
+                client.table("cart_items").delete().eq("cart_id", cart_res.data["id"]).execute()
+        except Exception as ce:
+            print(f"Cart cleanup notice: {ce}")
 
         return {"status": "ok", "order_id": oid}
         
@@ -153,6 +159,44 @@ def get_user_orders(user_id: str, email: str = None):
         return orders_data
     except Exception as e:
         print(f"Fetch Orders Error: {e}")
+        return []
+
+@router.get("/api/payments/user/{user_id}")
+def get_user_payments(user_id: str):
+    """Fetch complete payment transaction history for a user"""
+    try:
+        client = get_supabase_admin()
+        # 1. Fetch user orders
+        orders_res = client.table("orders").select("id, total_price, payment_method, status, created_at").eq("user_id", user_id).order("created_at", desc=True).execute()
+        orders = orders_res.data or []
+        if not orders:
+            return []
+
+        order_ids = [o["id"] for o in orders]
+        # 2. Fetch payments records
+        payments_res = client.table("payments").select("*").in_("order_id", order_ids).order("created_at", desc=True).execute()
+        payments = payments_res.data or []
+        payment_by_order = {p["order_id"]: p for p in payments}
+
+        transactions = []
+        for o in orders:
+            p = payment_by_order.get(o["id"])
+            is_rzp = str(o.get("payment_method", "")).lower() == "razorpay"
+            is_confirmed = str(o.get("status", "")).lower() in ["confirmed", "completed", "delivered"]
+            
+            transactions.append({
+                "id": p["id"] if p else f"tx_{o['id']}",
+                "order_id": o["id"],
+                "amount": p["amount"] if p else o.get("total_price", 0),
+                "payment_method": o.get("payment_method", "COD"),
+                "status": "completed" if (is_rzp or is_confirmed) else (o.get("status") if o.get("status") == "cancelled" else "pending"),
+                "razorpay_id": p.get("razorpay_id") if p else None,
+                "created_at": p.get("created_at") if p else o.get("created_at"),
+            })
+
+        return transactions
+    except Exception as e:
+        print(f"Error fetching payments for user {user_id}: {e}")
         return []
 
 @router.put("/api/orders/{order_id}/cancel")
@@ -212,3 +256,52 @@ def repair_orders(data: dict = Body(...)):
     except Exception as e:
         print(f"Repair Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/api/orders/razorpay/create-order")
+def create_razorpay_order(data: dict = Body(...)):
+    """Create a standard Razorpay order for mobile and web checkouts"""
+    try:
+        amount = data.get("amount")
+        if not amount or float(amount) <= 0:
+            raise HTTPException(status_code=400, detail="Invalid amount")
+
+        key_id = os.environ.get("RAZORPAY_KEY_ID", "rzp_test_T1oxnYBnlYBotP")
+        key_secret = os.environ.get("RAZORPAY_KEY_SECRET", "0fVI49gNTYKCTbVNtDj4rtue")
+
+        # Amount in paise (1 INR = 100 paise)
+        amount_in_paise = int(round(float(amount) * 100))
+        receipt = data.get("receipt", f"rcpt_{int(datetime.utcnow().timestamp())}" if 'datetime' in globals() else f"rcpt_{os.urandom(4).hex()}")
+
+        import requests
+        import base64
+
+        auth_str = f"{key_id}:{key_secret}"
+        b64_auth = base64.b64encode(auth_str.encode()).decode()
+
+        resp = requests.post(
+            "https://api.razorpay.com/v1/orders",
+            headers={"Authorization": f"Basic {b64_auth}", "Content-Type": "application/json"},
+            json={
+                "amount": amount_in_paise,
+                "currency": "INR",
+                "receipt": str(receipt),
+                "notes": data.get("notes", {})
+            },
+            timeout=10
+        )
+
+        if resp.status_code not in (200, 201):
+            raise HTTPException(status_code=resp.status_code, detail=resp.text)
+
+        order_data = resp.json()
+        return {
+            "success": True,
+            "order": order_data,
+            "key_id": key_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating Razorpay order: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
