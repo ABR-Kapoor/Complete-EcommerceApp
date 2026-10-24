@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { View, ActivityIndicator, StyleSheet, BackHandler } from 'react-native';
+import { View, StyleSheet, BackHandler, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { ClerkProvider, ClerkLoaded, useAuth, useUser } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
@@ -21,6 +21,7 @@ import { useUserStore } from '../store/userStore';
 import { useCartStore } from '../store/cartStore';
 import { useWishlistStore } from '../store/wishlistStore';
 import VoiceSearchDialog from '../components/VoiceSearchDialog';
+import { NotificationProvider } from '../context/NotificationContext';
 import { colors } from '../theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -128,12 +129,16 @@ export default function RootLayout() {
     }
   }, [fontsLoaded]);
 
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      RNStatusBar.setBarStyle('dark-content');
+      RNStatusBar.setBackgroundColor(colors.surface);
+      RNStatusBar.setTranslucent(true);
+    }
+  }, []);
+
   if (!fontsLoaded) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return null;
   }
 
   return (
@@ -141,11 +146,14 @@ export default function RootLayout() {
       <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
         <ClerkLoaded>
           <QueryClientProvider client={queryClient}>
-            <View style={styles.container} onLayout={onLayoutRootView}>
-              <StatusBar style="dark" />
-              <AuthGate />
-              <VoiceSearchDialog />
-            </View>
+            <NotificationProvider>
+              <View style={styles.container} onLayout={onLayoutRootView}>
+                <RNStatusBar backgroundColor={colors.surface} barStyle="dark-content" translucent={true} />
+                <StatusBar style="dark" />
+                <AuthGate />
+                <VoiceSearchDialog />
+              </View>
+            </NotificationProvider>
           </QueryClientProvider>
         </ClerkLoaded>
       </ClerkProvider>

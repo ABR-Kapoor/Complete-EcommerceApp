@@ -28,4 +28,14 @@ export const cartService = {
     const { data } = await api.delete(`/api/cart/${userId}/remove/${cartItemId}`);
     return data;
   },
+
+  async clearCart(userId: string) {
+    try {
+      const { data } = await api.delete(`/api/cart/${userId}/clear`);
+      return data;
+    } catch (e) {
+      console.log('Cart clear endpoint error or not deployed yet:', e);
+      return null;
+    }
+  },
 };

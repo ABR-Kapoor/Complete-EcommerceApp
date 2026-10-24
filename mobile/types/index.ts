@@ -70,6 +70,16 @@ export type OrderStatus =
   | 'cancelled'
   | 'refunded';
 
+export interface PaymentTransaction {
+  id: string | number;
+  order_id: number;
+  amount: number;
+  payment_method: string;
+  status: string;
+  razorpay_id?: string | null;
+  created_at?: string;
+}
+
 export interface OrderItem {
   id: number;
   order_id: number;
@@ -121,6 +131,12 @@ export interface Review {
   users?: {
     name: string;
     avatar_url: string | null;
+  };
+  products?: {
+    id: number;
+    title: string;
+    image_url: string;
+    price?: number;
   };
 }
 

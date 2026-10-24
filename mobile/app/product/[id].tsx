@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
+  Share,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
@@ -126,51 +127,65 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const handleShare = async () => {
+    if (!product) return;
+    try {
+      await Share.share({
+        message: `Check out ${product.title} on AuraMart! Price: ₹${product.price}`,
+      });
+    } catch {}
+  };
+
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          title: '',
-          headerTransparent: true,
-          headerShadowVisible: false,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={[styles.headerIconButton, { marginLeft: spacing.md }]}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <View style={{ flexDirection: 'row', gap: spacing.xs, marginRight: spacing.md }}>
-              <TouchableOpacity style={styles.headerIconButton}>
-                <MaterialCommunityIcons name="share-variant-outline" size={22} color={colors.textPrimary} />
-              </TouchableOpacity>
-              {user && (
-                <TouchableOpacity
-                  onPress={() => toggleWishlist(user.id, product.id)}
-                  style={styles.headerIconButton}
-                >
-                  <MaterialCommunityIcons
-                    name={isInWishlist ? 'heart' : 'heart-outline'}
-                    size={22}
-                    color={isInWishlist ? colors.error : colors.textPrimary}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          ),
-        }}
-      />
+      {/* Top Safe Area Header Bar */}
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 12) + spacing.xs }]}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+          style={styles.headerIconButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel="Back"
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110, paddingTop: insets.top + 60 }}>
+        <Text style={styles.headerTitle} numberOfLines={1}>
+          {product.category || 'Product Details'}
+        </Text>
+
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={handleShare}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Share"
+          >
+            <MaterialCommunityIcons name="share-variant-outline" size={20} color={colors.textPrimary} />
+          </TouchableOpacity>
+          {user && (
+            <TouchableOpacity
+              onPress={() => toggleWishlist(user.id, product.id)}
+              style={styles.headerIconButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityLabel="Wishlist"
+            >
+              <MaterialCommunityIcons
+                name={isInWishlist ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isInWishlist ? colors.error : colors.textPrimary}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110, paddingTop: spacing.md }}>
         {/* White Card Container for Hero Image */}
         <View style={styles.imageCardContainer}>
           <Image
@@ -364,6 +379,29 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   emptyText: { fontFamily: fonts.body, fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.lg },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitle: {
+    flex: 1,
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginHorizontal: spacing.sm,
+  },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   headerIconButton: {
     width: 38,
     height: 38,
@@ -373,12 +411,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   imageCardContainer: {
-    width: SCREEN_WIDTH - spacing['2xl'] * 2,
-    height: 240,
+    width: SCREEN_WIDTH - spacing.md * 2,
+    height: 260,
     backgroundColor: colors.surface,
-    borderRadius: 24,
-    marginHorizontal: spacing['2xl'],
-    marginTop: spacing.md,
+    borderRadius: 20,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.md,
@@ -389,11 +427,11 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   infoSection: {
-    padding: spacing['2xl'],
+    padding: spacing.lg,
     backgroundColor: colors.surface,
-    marginTop: spacing.lg,
-    marginHorizontal: spacing['2xl'],
-    borderRadius: 24,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.md,
+    borderRadius: 20,
     ...shadows.sm,
   },
   title: {
@@ -526,12 +564,12 @@ const styles = StyleSheet.create({
     color: colors.surface,
   },
   navTabsContainer: {
-    paddingHorizontal: spacing['2xl'],
-    marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.md,
     gap: spacing.sm,
   },
   navTab: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
     backgroundColor: colors.surface,
@@ -552,11 +590,11 @@ const styles = StyleSheet.create({
     color: colors.surface,
   },
   aboutCard: {
-    marginTop: spacing.lg,
-    marginHorizontal: spacing['2xl'],
-    padding: spacing['2xl'],
+    marginTop: spacing.md,
+    marginHorizontal: spacing.md,
+    padding: spacing.lg,
     backgroundColor: colors.surface,
-    borderRadius: 24,
+    borderRadius: 20,
     ...shadows.sm,
   },
   aboutTitle: {
@@ -596,8 +634,8 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   relatedSection: {
-    paddingHorizontal: spacing['2xl'],
-    marginTop: spacing['2xl'],
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xl,
   },
   relatedTitle: {
     fontFamily: fonts.heading,

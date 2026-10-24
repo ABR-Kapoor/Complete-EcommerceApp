@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUserStore } from '../../store/userStore';
@@ -17,8 +18,9 @@ import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 
 export default function AddressScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useUser();
-  const { address, loading: addressLoading, fetchAddress, saveAddress } = useUserStore();
+  const { address, profile, loading: addressLoading, fetchAddress, saveAddress } = useUserStore();
 
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
@@ -39,9 +41,18 @@ export default function AddressScreen() {
       setCity(address.city || '');
       setState(address.state || '');
       setZipCode(address.zip_code || '');
-      setPhone(address.phone || '');
+      setPhone(
+        address.phone ||
+        profile?.phone ||
+        user?.primaryPhoneNumber?.phoneNumber ||
+        ''
+      );
+    } else {
+      const fallbackPhone =
+        profile?.phone || user?.primaryPhoneNumber?.phoneNumber || '';
+      if (fallbackPhone) setPhone(fallbackPhone);
     }
-  }, [address]);
+  }, [address, profile, user]);
 
   const handleSave = async () => {
     if (!user?.id) return;
@@ -86,33 +97,31 @@ export default function AddressScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Delivery Address',
-          headerStyle: { backgroundColor: colors.surface },
-          headerTintColor: colors.textPrimary,
-          headerTitleStyle: { fontFamily: fonts.heading, fontSize: fontSize.lg },
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={{ marginRight: spacing.md }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <MaterialCommunityIcons name="arrow-left" size={24} color={colors.textPrimary} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+      {/* Safe Area Top Header */}
+      <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 12) + spacing.xs }]}>
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/(tabs)');
+            }
+          }}
+          style={styles.headerIconButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityLabel="Back"
+        >
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Delivery Address</Text>
+        <View style={{ width: 38 }} />
+      </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 20) + 40 },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -206,6 +215,29 @@ export default function AddressScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  headerTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.textPrimary,
+  },
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   scrollContent: { paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: 40 },
   card: {
     backgroundColor: colors.surface,

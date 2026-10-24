@@ -50,7 +50,7 @@ export default function CategoriesScreen() {
     <FlatList
       data={categories}
       keyExtractor={(item) => item.id.toString()}
-      contentContainerStyle={[styles.listContent, { paddingTop: insets.top + spacing.sm }]}
+      contentContainerStyle={[styles.listContent, { paddingTop: spacing.md }]}
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={
         <View style={styles.centered}>

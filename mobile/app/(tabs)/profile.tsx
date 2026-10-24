@@ -136,7 +136,7 @@ export default function ProfileScreen() {
           icon="star-outline"
           label="Reviews"
           subtitle="Your product reviews"
-          onPress={() => Alert.alert('Reviews', 'Your reviews will appear here.')}
+          onPress={() => router.push('/profile/reviews')}
         />
         <View style={styles.menuDivider} />
 
@@ -144,7 +144,7 @@ export default function ProfileScreen() {
           icon="credit-card-outline"
           label="Payment History"
           subtitle="View transactions"
-          onPress={() => Alert.alert('Payment History', 'No past transactions found.')}
+          onPress={() => router.push('/profile/payments')}
         />
         <View style={styles.menuDivider} />
 

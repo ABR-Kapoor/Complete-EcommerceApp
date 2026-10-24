@@ -9,6 +9,7 @@ import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useUser } from '@clerk/expo';
 import { useCartStore } from '../../store/cartStore';
 import { useUserStore } from '../../store/userStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
@@ -18,10 +19,13 @@ import CheckoutJourneyStepper from '../../components/CheckoutJourneyStepper';
 export default function CheckoutReviewScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useUser();
   const { items: cartItems, subtotal } = useCartStore();
-  const { address } = useUserStore();
+  const { address, profile } = useUserStore();
 
   const total = subtotal();
+  const displayPhone =
+    address?.phone || profile?.phone || user?.primaryPhoneNumber?.phoneNumber || '';
 
   return (
     <View style={styles.container}>
@@ -70,7 +74,9 @@ export default function CheckoutReviewScreen() {
               <Text style={styles.addressText}>
                 {address.city}, {address.state} - {address.zip_code}
               </Text>
-              <Text style={styles.phoneText}>Phone: {address.phone}</Text>
+              <Text style={styles.phoneText}>
+                Phone: {displayPhone || 'Not provided (tap Change)'}
+              </Text>
             </View>
           ) : (
             <Text style={styles.noAddress}>No address selected</Text>

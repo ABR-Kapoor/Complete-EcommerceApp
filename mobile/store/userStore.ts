@@ -42,7 +42,12 @@ export const useUserStore = create<UserState>((set) => ({
   fetchProfile: async (userId) => {
     try {
       const profile = await usersService.getProfile(userId);
-      set({ profile });
+      set((state) => ({
+        profile,
+        address: state.address
+          ? { ...state.address, phone: state.address.phone || profile?.phone || '' }
+          : null,
+      }));
     } catch (err: any) {
       if (__DEV__) console.log('fetchProfile error:', err.message);
     }
@@ -51,7 +56,11 @@ export const useUserStore = create<UserState>((set) => ({
   fetchAddress: async (userId) => {
     try {
       const address = await usersService.getAddress(userId);
-      set({ address });
+      set((state) => ({
+        address: address
+          ? { ...address, phone: address.phone || state.profile?.phone || '' }
+          : null,
+      }));
     } catch (err: any) {
       if (__DEV__) console.log('fetchAddress error:', err.message);
     }
@@ -61,7 +70,23 @@ export const useUserStore = create<UserState>((set) => ({
     try {
       await usersService.saveAddress(userId, addressData);
       const address = await usersService.getAddress(userId);
-      set({ address });
+      set((state) => {
+        const phone = addressData.phone || address?.phone || state.profile?.phone || '';
+        return {
+          address: {
+            ...(address || addressData),
+            user_id: userId,
+            street: addressData.street,
+            city: addressData.city,
+            state: addressData.state,
+            zip_code: addressData.zip_code,
+            phone,
+          } as Address,
+          profile: state.profile
+            ? { ...state.profile, phone: phone || state.profile.phone }
+            : null,
+        };
+      });
     } catch (err: any) {
       set({ error: err.message });
     }
