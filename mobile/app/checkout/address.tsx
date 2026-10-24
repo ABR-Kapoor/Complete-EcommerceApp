@@ -22,7 +22,7 @@ export default function CheckoutAddressScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useUser();
-  const { address, loading: addressLoading, fetchAddress, saveAddress } = useUserStore();
+  const { address, profile, loading: addressLoading, fetchAddress, saveAddress } = useUserStore();
 
   const [street, setStreet] = useState('');
   const [city, setCity] = useState('');
@@ -43,9 +43,18 @@ export default function CheckoutAddressScreen() {
       setCity(address.city || '');
       setState(address.state || '');
       setZipCode(address.zip_code || '');
-      setPhone(address.phone || '');
+      setPhone(
+        address.phone ||
+        profile?.phone ||
+        user?.primaryPhoneNumber?.phoneNumber ||
+        ''
+      );
+    } else {
+      const fallbackPhone =
+        profile?.phone || user?.primaryPhoneNumber?.phoneNumber || '';
+      if (fallbackPhone) setPhone(fallbackPhone);
     }
-  }, [address]);
+  }, [address, profile, user]);
 
   const handleNext = async () => {
     if (!user?.id) return;

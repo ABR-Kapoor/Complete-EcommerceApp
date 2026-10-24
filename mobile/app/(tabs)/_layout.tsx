@@ -7,6 +7,8 @@ import { useCartStore } from '../../store/cartStore';
 import { useVoiceSearchStore } from '../../store/voiceSearchStore';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
 
+import { useWishlistStore } from '../../store/wishlistStore';
+
 function CartBadge() {
   const totalItems = useCartStore((s) => s.totalItems());
   if (totalItems === 0) return null;
@@ -17,18 +19,40 @@ function CartBadge() {
   );
 }
 
-function HeaderCartButton() {
+function WishlistBadge() {
+  const count = useWishlistStore((s) => s.productIds.length);
+  if (count === 0) return null;
+  return (
+    <View style={[styles.badge, styles.wishlistBadge]}>
+      <Text style={[styles.badgeText, styles.wishlistBadgeText]}>{count > 9 ? '9+' : count}</Text>
+    </View>
+  );
+}
+
+function HeaderRightActions() {
   const router = useRouter();
   return (
-    <TouchableOpacity
-      style={styles.headerCartButton}
-      onPress={() => router.push('/cart')}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      accessibilityLabel="Shopping cart"
-    >
-      <MaterialCommunityIcons name="shopping-outline" size={24} color={colors.textPrimary} />
-      <CartBadge />
-    </TouchableOpacity>
+    <View style={styles.headerRightGroup}>
+      <TouchableOpacity
+        style={styles.headerIconButton}
+        onPress={() => router.push('/wishlist')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel="Wishlist"
+      >
+        <MaterialCommunityIcons name="heart-outline" size={24} color={colors.textPrimary} />
+        <WishlistBadge />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.headerCartButton}
+        onPress={() => router.push('/cart')}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        accessibilityLabel="Shopping cart"
+      >
+        <MaterialCommunityIcons name="shopping-outline" size={24} color={colors.textPrimary} />
+        <CartBadge />
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -84,12 +108,13 @@ export default function TabsLayout() {
           shadowOpacity: 0,
           borderBottomWidth: 0,
         },
+        headerStatusBarHeight: insets.top,
         headerTitleStyle: {
           fontFamily: fonts.heading,
           fontSize: fontSize.lg,
           color: colors.textPrimary,
         },
-        headerRight: () => <HeaderCartButton />,
+        headerRight: () => <HeaderRightActions />,
       }}
     >
       <Tabs.Screen
@@ -106,7 +131,7 @@ export default function TabsLayout() {
             paddingLeft: 0,
             marginLeft: 0,
           },
-          headerRight: () => <HeaderCartButton />,
+          headerRight: () => <HeaderRightActions />,
           headerRightContainerStyle: {
             paddingRight: 0,
             marginRight: 0,
@@ -191,30 +216,49 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  headerCartButton: {
-    marginRight: spacing.sm,
-    width: 44,
+  headerRightGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: spacing.md,
+    gap: spacing.xs,
+  },
+  headerIconButton: {
+    width: 36,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  headerCartButton: {
+    width: 36,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
   },
   badge: {
     position: 'absolute',
     top: 4,
-    right: 2,
+    right: 0,
     backgroundColor: colors.accent,
     borderRadius: radius.full,
-    minWidth: 18,
-    height: 18,
+    minWidth: 17,
+    height: 17,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+  },
+  wishlistBadge: {
+    backgroundColor: colors.primary,
   },
   badgeText: {
     fontFamily: fonts.bodySemiBold,
     fontSize: 10,
     color: colors.textPrimary,
     lineHeight: 14,
+  },
+  wishlistBadgeText: {
+    color: colors.surface,
   },
   voiceTabTouchable: {
     top: -24,
@@ -245,12 +289,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.25 }],
   },
   headerLeftContainer: {
-    paddingLeft: spacing.xs,
+    paddingLeft: spacing.md,
     justifyContent: 'center',
     alignItems: 'flex-start',
   },
   headerLogo: {
-    width: 155,
-    height: 42,
+    width: 135,
+    height: 32,
   },
 });

@@ -11,6 +11,7 @@ interface CartState {
   addToCart: (userId: string, productId: number, quantity?: number) => Promise<void>;
   updateQuantity: (userId: string, cartItemId: number, quantity: number) => Promise<void>;
   removeItem: (userId: string, cartItemId: number) => Promise<void>;
+  clearCart: (userId: string) => Promise<void>;
   clearLocal: () => void;
 
   // Computed
@@ -65,6 +66,24 @@ export const useCartStore = create<CartState>((set, get) => ({
       await cartService.removeItem(userId, cartItemId);
     } catch (err: any) {
       set({ items: prevItems, error: err.message });
+    }
+  },
+
+  clearCart: async (userId: string) => {
+    const prevItems = get().items;
+    set({ items: [], loading: false, error: null });
+    if (userId) {
+      try {
+        await cartService.clearCart(userId);
+      } catch (err: any) {
+        console.log('clearCart API error:', err);
+      }
+      // Resilient cleanup: remove individual items in case backend /clear route is not yet deployed
+      for (const item of prevItems) {
+        try {
+          await cartService.removeItem(userId, item.id);
+        } catch {}
+      }
     }
   },
 

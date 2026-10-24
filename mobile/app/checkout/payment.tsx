@@ -19,26 +19,27 @@ import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { CreateOrderPayload } from '../../types';
 
 import CheckoutJourneyStepper from '../../components/CheckoutJourneyStepper';
+import RazorpayCheckoutModal from '../../components/RazorpayCheckoutModal';
 
 export default function CheckoutPaymentScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useUser();
-  const { items: cartItems, subtotal, clearLocal } = useCartStore();
+  const { items: cartItems, subtotal, clearCart, clearLocal } = useCartStore();
   const { address } = useUserStore();
 
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay'>('cod');
   const [loading, setLoading] = useState(false);
+  const [showRazorpayModal, setShowRazorpayModal] = useState(false);
 
   const total = subtotal();
 
-  const handlePlaceOrder = async () => {
-    if (!user?.id) return;
-    if (!address) {
-      Alert.alert('Address Missing', 'Please select a delivery address.');
-      router.push('/checkout/address');
-      return;
-    }
+  const submitOrder = async (extraFields: {
+    payment_method: string;
+    razorpay_payment_id?: string;
+    status?: string;
+  }) => {
+    if (!user?.id || !address) return;
 
     setLoading(true);
     try {
@@ -48,7 +49,9 @@ export default function CheckoutPaymentScreen() {
         name: user.fullName || user.firstName || 'Customer',
         phone: address.phone,
         total_price: total,
-        payment_method: paymentMethod,
+        payment_method: extraFields.payment_method,
+        status: extraFields.status,
+        razorpay_payment_id: extraFields.razorpay_payment_id,
         address: {
           street: address.street,
           city: address.city,
@@ -64,16 +67,33 @@ export default function CheckoutPaymentScreen() {
       };
 
       const createdOrder = await ordersService.createOrder(orderPayload);
-      clearLocal();
+      await clearCart(user.id);
+
+      const newOrderId = createdOrder?.order_id || createdOrder?.id || '';
 
       router.replace({
         pathname: '/checkout/success',
-        params: { orderId: (createdOrder?.id || '').toString(), total: total.toString() },
+        params: { orderId: newOrderId.toString(), total: total.toString() },
       });
     } catch {
       Alert.alert('Error', 'Failed to place order. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!user?.id) return;
+    if (!address) {
+      Alert.alert('Address Missing', 'Please select a delivery address.');
+      router.push('/checkout/address');
+      return;
+    }
+
+    if (paymentMethod === 'razorpay') {
+      setShowRazorpayModal(true);
+    } else {
+      await submitOrder({ payment_method: 'COD' });
     }
   };
 
@@ -172,11 +192,41 @@ export default function CheckoutPaymentScreen() {
             <ActivityIndicator color={colors.surface} />
           ) : (
             <Text style={styles.placeOrderBtnText}>
-              Confirm & Place Order (₹{total.toLocaleString()})
+              {paymentMethod === 'razorpay'
+                ? `Pay ₹${total.toLocaleString()} via Razorpay`
+                : `Confirm & Place Order (₹${total.toLocaleString()})`}
             </Text>
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Razorpay Online Checkout Modal */}
+      <RazorpayCheckoutModal
+        visible={showRazorpayModal}
+        amount={total}
+        userName={user?.fullName || user?.firstName || 'Customer'}
+        userEmail={user?.primaryEmailAddress?.emailAddress || ''}
+        userPhone={address?.phone || user?.primaryPhoneNumber?.phoneNumber || ''}
+        onSuccess={async (paymentId) => {
+          setShowRazorpayModal(false);
+          await submitOrder({
+            payment_method: 'Razorpay',
+            razorpay_payment_id: paymentId,
+            status: 'confirmed',
+          });
+        }}
+        onCancel={() => {
+          setShowRazorpayModal(false);
+          Alert.alert(
+            'Payment Cancelled',
+            'You cancelled the Razorpay payment. You can retry or choose Cash on Delivery (COD).'
+          );
+        }}
+        onFailure={(errorDesc) => {
+          setShowRazorpayModal(false);
+          Alert.alert('Payment Failed', errorDesc);
+        }}
+      />
     </View>
   );
 }

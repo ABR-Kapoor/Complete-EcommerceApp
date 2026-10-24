@@ -4,20 +4,30 @@
     "slug": "auramart",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app-icon.png",
     "scheme": "auramart",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/AuraMart-transparent-Logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "androidStatusBar": {
+      "barStyle": "dark-content",
+      "backgroundColor": "#FFFFFF",
+      "translucent": true
+    },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundColor": "#DCFCE7"
+        "foregroundImage": "./assets/app-icon.png",
+        "backgroundColor": "#F9FDFE"
       },
       "package": "com.aurasutra.auramart"
     },
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/app-icon.png"
     },
     "plugins": [
       "expo-router",
@@ -27,9 +37,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/AuraMart-transparent-Logo.png",
           "resizeMode": "contain",
-          "backgroundColor": "#DCFCE7"
+          "backgroundColor": "#FFFFFF"
         }
       ],
       [

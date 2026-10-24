@@ -7,6 +7,16 @@ export const reviewsService = {
     return data;
   },
 
+  async getUserReviews(userId: string): Promise<Review[]> {
+    try {
+      const { data } = await api.get(`/api/reviews/user/${userId}`);
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      console.log('Error fetching user reviews:', e);
+      return [];
+    }
+  },
+
   async createReview(
     userId: string,
     review: { product_id: number; rating: number; text: string; order_id?: number }

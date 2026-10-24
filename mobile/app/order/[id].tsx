@@ -118,7 +118,9 @@ export default function OrderDetailScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Custom Safe Header Bar */}
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Safe Area Top Header */}
       <View style={[styles.headerBar, { paddingTop: Math.max(insets.top, 12) + spacing.xs }]}>
         <TouchableOpacity
           onPress={() => {
@@ -128,14 +130,15 @@ export default function OrderDetailScreen() {
               router.replace('/(tabs)/orders');
             }
           }}
-          style={styles.headerBackRow}
+          style={styles.headerIconButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.primary} />
-          <Text style={styles.headerBackText}>Back to Orders</Text>
+          <MaterialCommunityIcons name="arrow-left" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Order #{order.id}</Text>
+        <Text style={styles.headerTitle}>Track Order #{order.id}</Text>
+
+        <View style={{ width: 38 }} />
       </View>
 
       <ScrollView
@@ -300,25 +303,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  headerBackRow: {
-    flexDirection: 'row',
+  headerIconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: radius.full,
+    backgroundColor: colors.surfaceAlt,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
-  },
-  headerBackText: {
-    fontFamily: fonts.bodySemiBold,
-    fontSize: fontSize.sm,
-    color: colors.primary,
   },
   headerTitle: {
     fontFamily: fonts.headingBold,
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
     color: colors.textPrimary,
   },
   scrollContent: { padding: spacing.lg, paddingBottom: 80 },
