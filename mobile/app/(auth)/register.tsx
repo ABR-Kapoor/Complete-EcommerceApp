@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,26 +11,39 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { useSignUp, useOAuth } from '@clerk/expo';
+import { useSignUp, useSSO, useClerk } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { colors, fonts, fontSize, spacing, radius } from '../../theme';
 import { getClerkErrorMessage } from '../../services/clerkError';
 
+function useWarmUpBrowser() {
+  useEffect(() => {
+    void WebBrowser.warmUpAsync();
+    return () => {
+      void WebBrowser.coolDownAsync();
+    };
+  }, []);
+}
+
 WebBrowser.maybeCompleteAuthSession();
 
 export default function RegisterScreen() {
   const { signUp } = useSignUp();
-  const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
+  const { startSSOFlow } = useSSO();
+  const { setActive: clerkSetActive } = useClerk();
   const router = useRouter();
+  useWarmUpBrowser();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
   const [code, setCode] = useState('');
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
@@ -103,16 +116,33 @@ export default function RegisterScreen() {
   }, [code, router, signUp]);
 
   const handleGoogleSignUp = useCallback(async () => {
+    setErrorMsg('');
+    setGoogleLoading(true);
     try {
-      const { createdSessionId, setActive } = await startOAuthFlow();
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
+      const redirectUrl = Linking.createURL('/(tabs)', { scheme: 'auramart' });
+      const { createdSessionId, setActive, signIn: ssoSignIn, signUp: ssoSignUp, authSessionResult } = await startSSOFlow({
+        strategy: 'oauth_google',
+        redirectUrl,
+      });
+
+      const activate = setActive || clerkSetActive;
+      const sessionId = createdSessionId || ssoSignIn?.createdSessionId || ssoSignUp?.createdSessionId;
+
+      if (sessionId && activate) {
+        await activate({ session: sessionId });
         router.replace('/(tabs)');
+      } else if (authSessionResult?.type === 'cancel' || authSessionResult?.type === 'dismiss') {
+        // Voluntarily dismissed
+      } else {
+        setErrorMsg('Google sign up could not be completed. Please try again.');
       }
-    } catch {
-      setErrorMsg('Failed to sign up with Google');
+    } catch (err: unknown) {
+      console.log('Google Sign Up Error:', err);
+      setErrorMsg(getClerkErrorMessage(err, 'Failed to sign up with Google.'));
+    } finally {
+      setGoogleLoading(false);
     }
-  }, [startOAuthFlow, router]);
+  }, [startSSOFlow, clerkSetActive, router]);
 
   if (pendingVerification) {
     return (
@@ -298,9 +328,20 @@ export default function RegisterScreen() {
           <View nativeID="clerk-captcha" />
 
           {/* Google Sign In Button */}
-          <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp} activeOpacity={0.8}>
-            <MaterialCommunityIcons name="google" size={20} color="#DB4437" style={{ marginRight: 10 }} />
-            <Text style={styles.googleButtonText}>Sign Up With Google</Text>
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleSignUp}
+            activeOpacity={0.8}
+            disabled={googleLoading || loading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator size="small" color="#DB4437" />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="google" size={20} color="#DB4437" style={{ marginRight: 10 }} />
+                <Text style={styles.googleButtonText}>Sign Up With Google</Text>
+              </>
+            )}
           </TouchableOpacity>
 
           {/* Create Account Link */}
