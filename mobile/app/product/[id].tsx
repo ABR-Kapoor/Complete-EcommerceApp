@@ -59,6 +59,8 @@ export default function ProductDetailScreen() {
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+const FALLBACK_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
 
   useEffect(() => {
     if (!id) {
@@ -242,10 +244,11 @@ export default function ProductDetailScreen() {
         {/* White Card Container for Hero Image */}
         <View style={styles.imageCardContainer}>
           <Image
-            source={{ uri: product.image_url }}
+            source={{ uri: imgError || !product.image_url ? FALLBACK_PRODUCT_IMAGE : product.image_url }}
             style={styles.productImage}
             contentFit="contain"
             transition={300}
+            onError={() => setImgError(true)}
           />
         </View>
 

@@ -117,7 +117,7 @@ export default function WishlistScreen() {
         accessibilityLabel={`${item.title}, ₹${item.price}`}
       >
         <Image
-          source={{ uri: item.image_url }}
+          source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80' }}
           style={styles.productImage}
           contentFit="cover"
           placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}

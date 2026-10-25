@@ -23,6 +23,7 @@ function CartItemCard({ item }: { item: CartItem }) {
   const { user } = useUser();
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
+  const [imgError, setImgError] = useState(false);
 
   const handleRemove = () => {
     Alert.alert('Remove Item', `Remove ${item.products.title} from cart?`, [
@@ -38,10 +39,11 @@ function CartItemCard({ item }: { item: CartItem }) {
   return (
     <View style={styles.cartItem}>
       <Image
-        source={{ uri: item.products.image_url }}
+        source={{ uri: imgError || !item.products?.image_url ? 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80' : item.products.image_url }}
         style={styles.itemImage}
         contentFit="cover"
         transition={200}
+        onError={() => setImgError(true)}
       />
       <View style={styles.itemDetails}>
         <Text style={styles.itemTitle} numberOfLines={2}>

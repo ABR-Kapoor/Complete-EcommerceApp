@@ -42,6 +42,7 @@ function CategoryProductCard({ product }: { product: Product }) {
   const isInWishlist = useWishlistStore((s) => s.productIds.includes(product.id));
   const { showToast } = useNotification();
   const [adding, setAdding] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleQuickAdd = async () => {
     if (!user?.id) {
@@ -67,10 +68,11 @@ function CategoryProductCard({ product }: { product: Product }) {
     >
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: product.image_url }}
+          source={{ uri: imgError || !product.image_url ? 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80' : product.image_url }}
           style={styles.productImage}
           contentFit="cover"
           transition={200}
+          onError={() => setImgError(true)}
         />
         {product.is_sale && (
           <View style={styles.saleBadge}>
