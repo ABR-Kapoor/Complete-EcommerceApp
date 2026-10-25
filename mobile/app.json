@@ -22,7 +22,13 @@
         "foregroundImage": "./assets/app-icon.png",
         "backgroundColor": "#F9FDFE"
       },
-      "package": "com.aurasutra.auramart"
+      "package": "com.aurasutra.auramart",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -53,6 +59,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7df4d1ef-f42a-428a-a316-bfe35d4f3fe8"
+      }
+    },
+    "owner": "biryanidev"
   }
 }

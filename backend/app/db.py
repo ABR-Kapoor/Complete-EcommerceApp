@@ -1,4 +1,6 @@
+from __future__ import annotations
 import os
+from typing import Optional
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -7,8 +9,9 @@ load_dotenv()
 
 # Module-level singleton — prevents Errno 16 "Device or resource busy"
 # in Vercel serverless where creating multiple httpx clients causes socket conflicts
-_supabase_client: Client | None = None
-_supabase_admin_client: Client | None = None
+_supabase_client: Optional[Client] = None
+_supabase_admin_client: Optional[Client] = None
+
 
 def get_supabase_client() -> Client:
     global _supabase_client
