@@ -291,11 +291,9 @@ export default function VoiceSearchDialog() {
 
   const handleAddToCart = useCallback(
     (productId: number) => {
-      if (user) {
-        addToCart(user.id, productId, 1);
-        setAddedId(productId);
-        setTimeout(() => setAddedId(null), 1500);
-      }
+      addToCart(user?.id || 'guest', productId, 1);
+      setAddedId(productId);
+      setTimeout(() => setAddedId(null), 1500);
     },
     [user, addToCart]
   );

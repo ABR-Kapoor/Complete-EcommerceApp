@@ -50,6 +50,8 @@ function SkeletonCard() {
   );
 }
 
+const FALLBACK_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
+
 // ──────────────────────────────────
 // Product card
 // ──────────────────────────────────
@@ -59,16 +61,21 @@ function ProductCard({ product }: { product: Product }) {
   const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
   const addToCart = useCartStore((s) => s.addToCart);
   const isInWishlist = useWishlistStore((s) => s.productIds.includes(product.id));
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleQuickAdd = async () => {
-    if (!user?.id) {
-      router.push((`/product/${product.id}`) as any);
-      return;
-    }
+    if (adding) return;
+    setAdding(true);
     try {
-      await addToCart(user.id, product.id, 1);
+      await addToCart(user?.id || 'guest', product.id, 1, product);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
     } catch {
       // Handled in store
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -81,11 +88,12 @@ function ProductCard({ product }: { product: Product }) {
     >
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: product.image_url }}
+          source={{ uri: imgError || !product.image_url ? FALLBACK_PRODUCT_IMAGE : product.image_url }}
           style={styles.productImage}
           contentFit="cover"
           placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
           transition={200}
+          onError={() => setImgError(true)}
         />
         {product.is_sale && (
           <View style={styles.saleBadge}>
@@ -125,11 +133,16 @@ function ProductCard({ product }: { product: Product }) {
         </View>
 
         <TouchableOpacity
-          style={styles.cardAddToCartBtn}
+          style={[styles.cardAddToCartBtn, added && { backgroundColor: '#059669' }]}
           onPress={handleQuickAdd}
           activeOpacity={0.85}
+          disabled={adding}
         >
-          <Text style={styles.cardAddToCartText}>Add to Cart</Text>
+          {adding ? (
+            <ActivityIndicator size="small" color={colors.surface} />
+          ) : (
+            <Text style={styles.cardAddToCartText}>{added ? 'Added ✓' : 'Add to Cart'}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -140,14 +153,16 @@ function ProductCard({ product }: { product: Product }) {
 // Top deal card
 // ──────────────────────────────────
 function DealCard({ product, onPress }: { product: Product; onPress: () => void }) {
+  const [imgError, setImgError] = useState(false);
   return (
     <TouchableOpacity style={styles.dealCard} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.dealImageWrap}>
         <Image
-          source={{ uri: product.image_url }}
+          source={{ uri: imgError || !product.image_url ? FALLBACK_PRODUCT_IMAGE : product.image_url }}
           style={styles.dealImage}
           contentFit="cover"
           transition={150}
+          onError={() => setImgError(true)}
         />
         <View style={styles.dealBadge}>
           <Text style={styles.dealBadgeText}>SALE</Text>

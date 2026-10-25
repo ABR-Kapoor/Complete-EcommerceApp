@@ -12,16 +12,20 @@ def get_cart(user_id: str):
         
         # Ensure user exists (Handshake)
         user_check = client.table("users").select("id").eq("id", user_id).maybe_single().execute()
-        if not user_check.data:
-            client.table("users").insert({"id": user_id, "name": "Authentic User"}).execute()
+        if not user_check or not getattr(user_check, "data", None):
+            try:
+                client.table("users").insert({"id": user_id, "name": "Authentic User"}).execute()
+            except Exception as ue:
+                print(f"User handshake notice: {ue}")
 
         # Use maybe_single to avoid errors if cart doesn't exist yet
         cart_res = client.table("carts").select("id").eq("user_id", user_id).maybe_single().execute()
+        cart_data = getattr(cart_res, "data", None) if cart_res else None
         
-        if cart_res and cart_res.data:
+        if cart_data:
             # Join with products table to get title, price, image_url
-            items = client.table("cart_items").select("*, products(title, price, image_url)").eq("cart_id", cart_res.data["id"]).execute()
-            return items.data or []
+            items = client.table("cart_items").select("*, products(title, price, image_url)").eq("cart_id", cart_data["id"]).execute()
+            return (items.data if items and hasattr(items, "data") else []) or []
         return []
     except Exception as e:
         print(f"ERROR in get_cart: {str(e)}")
@@ -35,36 +39,38 @@ def add_to_cart(user_id: str, item: CartItem):
         
         # 1. Ensure user exists in DB (Handshake)
         user_check = client.table("users").select("id").eq("id", user_id).maybe_single().execute()
-        if not user_check or not user_check.data:
-            client.table("users").insert({"id": user_id, "name": "Authentic User"}).execute()
+        if not user_check or not getattr(user_check, "data", None):
+            try:
+                client.table("users").insert({"id": user_id, "name": "Authentic User"}).execute()
+            except Exception as ue:
+                print(f"User handshake notice: {ue}")
 
         # 2. Get or Create UNIQUE Cart
-        # We use a try-except or check to handle the unique constraint
         cart_res = client.table("carts").select("id").eq("user_id", user_id).maybe_single().execute()
+        cart_data = getattr(cart_res, "data", None) if cart_res else None
         
-        if not cart_res or not cart_res.data:
+        if not cart_data:
             print("DEBUG: Initializing new unique cart")
-            # Try to insert; if it fails due to unique constraint, we just fetch it again
             try:
                 new_cart = client.table("carts").insert({"user_id": user_id}).execute()
-                if new_cart and new_cart.data:
+                if new_cart and getattr(new_cart, "data", None):
                     cart_id = new_cart.data[0]["id"]
                 else:
-                    # Fallback fetch in case of race condition
-                    cart_res = client.table("carts").select("id").eq("user_id", user_id).single().execute()
-                    cart_id = cart_res.data["id"]
-            except:
-                cart_res = client.table("carts").select("id").eq("user_id", user_id).single().execute()
-                cart_id = cart_res.data["id"]
+                    c_fetch = client.table("carts").select("id").eq("user_id", user_id).execute()
+                    cart_id = c_fetch.data[0]["id"]
+            except Exception:
+                c_fetch = client.table("carts").select("id").eq("user_id", user_id).execute()
+                cart_id = c_fetch.data[0]["id"]
         else:
-            cart_id = cart_res.data["id"]
+            cart_id = cart_data["id"]
         
         # 3. Upsert item in cart
         existing = client.table("cart_items").select("id, quantity").eq("cart_id", cart_id).eq("product_id", item.product_id).maybe_single().execute()
+        existing_data = getattr(existing, "data", None) if existing else None
         
-        if existing and existing.data:
-            new_qty = existing.data["quantity"] + item.quantity
-            client.table("cart_items").update({"quantity": new_qty}).eq("id", existing.data["id"]).execute()
+        if existing_data:
+            new_qty = existing_data["quantity"] + item.quantity
+            client.table("cart_items").update({"quantity": new_qty}).eq("id", existing_data["id"]).execute()
         else:
             client.table("cart_items").insert({
                 "cart_id": cart_id,
@@ -103,8 +109,9 @@ def clear_user_cart(user_id: str):
     try:
         client = get_supabase_admin()
         cart_res = client.table("carts").select("id").eq("user_id", user_id).maybe_single().execute()
-        if cart_res and cart_res.data:
-            client.table("cart_items").delete().eq("cart_id", cart_res.data["id"]).execute()
+        cart_data = getattr(cart_res, "data", None) if cart_res else None
+        if cart_data:
+            client.table("cart_items").delete().eq("cart_id", cart_data["id"]).execute()
         return {"status": "ok"}
     except Exception as e:
         print(f"Error clearing user cart: {e}")

@@ -52,72 +52,77 @@ export default function ProductDetailScreen() {
   const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
   const isInWishlist = useWishlistStore((s) => s.productIds.includes(Number(id)));
 
-  const [product, setProduct] = useState<Product | null>(null);
+  const pid = Number(id);
+  const initialProduct = !isNaN(pid) ? productsService.getInitialSync(pid) : null;
+
+  const [product, setProduct] = useState<Product | null>(initialProduct || null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialProduct);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const FALLBACK_PRODUCT_IMAGE = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
 
   useEffect(() => {
-    if (!id) {
+    if (!id || isNaN(pid)) {
       setLoading(false);
       return;
     }
-    const pid = Number(id);
+
     let isMounted = true;
+    setImgError(false);
 
-    setLoading(true);
+    // Instant sync hydration if not already set
+    const syncProd = productsService.getInitialSync(pid);
+    if (syncProd) {
+      setProduct(syncProd);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
-    const loadData = async () => {
-      try {
-        const prod = await productsService.getById(pid);
-        if (isMounted && prod && prod.id) {
-          setProduct(prod);
+    // Parallel background fetch for fresh data & reviews
+    Promise.allSettled([
+      productsService.getById(pid),
+      reviewsService.getProductReviews(pid),
+    ]).then(([prodRes, revsRes]) => {
+      if (!isMounted) return;
 
-          if (prod.category) {
-            productsService
-              .getAll({ category: prod.category })
-              .then((all) => {
-                if (isMounted) {
-                  setRelatedProducts(all.filter((p) => p.id !== pid).slice(0, 6));
-                }
-              })
-              .catch(() => {});
-          }
+      if (prodRes.status === 'fulfilled' && prodRes.value && prodRes.value.id) {
+        setProduct(prodRes.value);
+        if (prodRes.value.category) {
+          productsService
+            .getAll({ category: prodRes.value.category })
+            .then((all) => {
+              if (isMounted) {
+                setRelatedProducts(all.filter((p) => p.id !== pid).slice(0, 6));
+              }
+            })
+            .catch(() => {});
         }
-      } catch (e) {
-        console.log('Error fetching product:', e);
       }
 
-      try {
-        const revs = await reviewsService.getProductReviews(pid);
-        if (isMounted && Array.isArray(revs)) {
-          setReviews(revs);
-        }
-      } catch {
-        if (isMounted) setReviews([]);
+      if (revsRes.status === 'fulfilled' && Array.isArray(revsRes.value)) {
+        setReviews(revsRes.value);
       }
 
+      setLoading(false);
+    }).catch(() => {
       if (isMounted) setLoading(false);
-    };
-
-    loadData();
+    });
 
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, pid]);
 
   const handleAddToCart = useCallback(async () => {
-    if (!user?.id || !product) {
-      showToast('Login Required', 'Please sign in to add products to your cart.');
-      return;
-    }
+    if (!product) return;
     setAdding(true);
     try {
-      await addToCart(user.id, product.id, quantity);
+      await addToCart(user?.id || 'guest', product.id, quantity, product);
       showToast('Added to Cart', `${product.title} (x${quantity}) added to your cart.`);
     } catch {
       showToast('Error', 'Could not add to cart. Please try again.');
@@ -127,13 +132,10 @@ export default function ProductDetailScreen() {
   }, [user, product, quantity, showToast, addToCart]);
 
   const handleBuyNow = useCallback(async () => {
-    if (!user?.id || !product) {
-      showToast('Login Required', 'Please sign in to proceed to checkout.');
-      return;
-    }
+    if (!product) return;
     setAdding(true);
     try {
-      await addToCart(user.id, product.id, quantity);
+      await addToCart(user?.id || 'guest', product.id, quantity, product);
       router.push('/cart');
     } catch {
       showToast('Error', 'Could not proceed to cart. Please try again.');
@@ -242,10 +244,11 @@ export default function ProductDetailScreen() {
         {/* White Card Container for Hero Image */}
         <View style={styles.imageCardContainer}>
           <Image
-            source={{ uri: product.image_url }}
+            source={{ uri: imgError || !product.image_url ? FALLBACK_PRODUCT_IMAGE : product.image_url }}
             style={styles.productImage}
             contentFit="contain"
             transition={300}
+            onError={() => setImgError(true)}
           />
         </View>
 

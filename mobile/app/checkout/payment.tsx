@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -26,11 +26,17 @@ export default function CheckoutPaymentScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
   const { items: cartItems, subtotal, clearCart, clearLocal } = useCartStore();
-  const { address } = useUserStore();
+  const { address, fetchAddress } = useUserStore();
 
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'razorpay'>('cod');
   const [loading, setLoading] = useState(false);
   const [showRazorpayModal, setShowRazorpayModal] = useState(false);
+
+  useEffect(() => {
+    if (!address) {
+      fetchAddress(user?.id || 'guest');
+    }
+  }, [address, user?.id, fetchAddress]);
 
   const total = subtotal();
 
@@ -39,16 +45,17 @@ export default function CheckoutPaymentScreen() {
     razorpay_payment_id?: string;
     status?: string;
   }) => {
-    if (!user?.id || !address) return;
+    const activeUserId = user?.id || 'guest';
+    if (!address) return;
 
     setLoading(true);
     try {
       const orderPayload: CreateOrderPayload = {
-        user_id: user.id,
-        email: user.primaryEmailAddress?.emailAddress || '',
-        name: user.fullName || user.firstName || 'Customer',
+        user_id: activeUserId,
+        email: user?.primaryEmailAddress?.emailAddress || 'customer@example.com',
+        name: user?.fullName || user?.firstName || 'Customer',
         phone: address.phone,
-        total_price: total,
+        total_price: Number(total),
         payment_method: extraFields.payment_method,
         status: extraFields.status,
         razorpay_payment_id: extraFields.razorpay_payment_id,
@@ -61,13 +68,13 @@ export default function CheckoutPaymentScreen() {
         },
         items: cartItems.map((ci) => ({
           product_id: ci.product_id,
-          quantity: ci.quantity,
-          price: ci.products.price,
+          quantity: Number(ci.quantity || 1),
+          price: Number(ci.products?.price ?? (ci as any).price ?? 0),
         })),
       };
 
       const createdOrder = await ordersService.createOrder(orderPayload);
-      await clearCart(user.id);
+      await clearCart(activeUserId);
 
       const newOrderId = createdOrder?.order_id || createdOrder?.id || '';
 
@@ -83,7 +90,6 @@ export default function CheckoutPaymentScreen() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!user?.id) return;
     if (!address) {
       Alert.alert('Address Missing', 'Please select a delivery address.');
       router.push('/checkout/address');
@@ -118,8 +124,8 @@ export default function CheckoutPaymentScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      {/* Modern Journey Stepper */}
-      <CheckoutJourneyStepper currentStep={3} />
+      {/* Modern Journey Timeline Stepper */}
+      <CheckoutJourneyStepper currentStep={3} addressDone={true} />
 
       <ScrollView
         contentContainerStyle={[

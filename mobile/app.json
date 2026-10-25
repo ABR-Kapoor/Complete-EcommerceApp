@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": " ",
+    "name": "AuraMart",
     "slug": "auramart",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,11 +12,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
-    "androidStatusBar": {
-      "barStyle": "dark-content",
-      "backgroundColor": "#FFFFFF",
-      "translucent": true
-    },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",

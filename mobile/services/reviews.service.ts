@@ -1,23 +1,50 @@
 import api from './api';
+import { supabaseApi } from './supabase';
 import { Review } from '../types';
 
 export const reviewsService = {
   async getProductReviews(productId: number): Promise<Review[]> {
+    // 1. Direct Supabase Query (ultra-fast ~100ms)
     try {
-      const { data } = await api.get(`/api/reviews/product/${productId}`);
+      const { data } = await supabaseApi.get('/reviews', {
+        params: {
+          product_id: 'eq.' + productId,
+          order: 'created_at.desc',
+        },
+      });
+      if (Array.isArray(data)) return data;
+    } catch {
+      // Fallback
+    }
+
+    // 2. Try Backend API with fast 2s timeout
+    try {
+      const { data } = await api.get(`/api/reviews/product/${productId}`, { timeout: 2000 });
       return Array.isArray(data) ? data : [];
     } catch {
       return [];
     }
   },
 
-
   async getUserReviews(userId: string): Promise<Review[]> {
+    // 1. Direct Supabase Query
     try {
-      const { data } = await api.get(`/api/reviews/user/${userId}`);
+      const { data } = await supabaseApi.get('/reviews', {
+        params: {
+          user_id: 'eq.' + userId,
+          order: 'created_at.desc',
+        },
+      });
+      if (Array.isArray(data)) return data;
+    } catch {
+      // Fallback
+    }
+
+    // 2. Try Backend API with fast 2s timeout
+    try {
+      const { data } = await api.get(`/api/reviews/user/${userId}`, { timeout: 2000 });
       return Array.isArray(data) ? data : [];
     } catch (e) {
-      console.log('Error fetching user reviews:', e);
       return [];
     }
   },

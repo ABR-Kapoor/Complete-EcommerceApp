@@ -51,8 +51,15 @@ function AuthGate() {
   const syncProfile = useUserStore((s) => s.syncProfile);
   const fetchAddress = useUserStore((s) => s.fetchAddress);
   const fetchCart = useCartStore((s) => s.fetchCart);
+  const initCart = useCartStore((s) => s.initCart);
+  const initUser = useUserStore((s) => s.initUser);
   const fetchWishlist = useWishlistStore((s) => s.fetchWishlist);
   const lastSyncedId = useRef<string | null>(null);
+
+  useEffect(() => {
+    initCart();
+    initUser();
+  }, [initCart, initUser]);
 
   // Auth routing guard
   useEffect(() => {

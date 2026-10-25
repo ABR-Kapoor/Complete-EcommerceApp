@@ -5,6 +5,7 @@ import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../../store/cartStore';
+import CheckoutJourneyStepper from '../../components/CheckoutJourneyStepper';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 
 export default function CheckoutSuccessScreen() {
@@ -39,6 +40,14 @@ export default function CheckoutSuccessScreen() {
           <MaterialCommunityIcons name="close" size={20} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
+
+      {/* Complete Checkout Journey Timeline with All 3 Steps Confirmed */}
+      <CheckoutJourneyStepper
+        currentStep={3}
+        cartDone={true}
+        addressDone={true}
+        paymentDone={true}
+      />
 
       <ScrollView
         contentContainerStyle={[

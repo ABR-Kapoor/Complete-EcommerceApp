@@ -76,9 +76,8 @@ export default function WishlistScreen() {
   }, [user?.id, fetchWishlist, loadProducts]);
 
   const handleMoveToCart = async (product: Product) => {
-    if (!user?.id) return;
     try {
-      await addToCart(user.id, product.id, 1);
+      await addToCart(user?.id || 'guest', product.id, 1, product);
       Alert.alert('Added to Cart', `${product.title} added to your cart.`, [
         { text: 'Keep Shopping', style: 'cancel' },
         { text: 'View Cart', onPress: () => router.push('/cart') },
@@ -89,10 +88,10 @@ export default function WishlistScreen() {
   };
 
   const handleMoveAllToCart = async () => {
-    if (!user?.id || products.length === 0) return;
+    if (products.length === 0) return;
     try {
       for (const p of products) {
-        await addToCart(user.id, p.id, 1);
+        await addToCart(user?.id || 'guest', p.id, 1, p);
       }
       Alert.alert('Success', 'All wishlist items have been added to your cart.', [
         { text: 'Continue', style: 'cancel' },
@@ -117,7 +116,7 @@ export default function WishlistScreen() {
         accessibilityLabel={`${item.title}, ₹${item.price}`}
       >
         <Image
-          source={{ uri: item.image_url }}
+          source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80' }}
           style={styles.productImage}
           contentFit="cover"
           placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
