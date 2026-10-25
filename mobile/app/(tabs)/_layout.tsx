@@ -102,6 +102,7 @@ export default function TabsLayout() {
           borderTopRightRadius: 24,
           borderTopWidth: 0,
         },
+        headerShadowVisible: false,
         headerStyle: {
           backgroundColor: colors.surface,
           elevation: 0,
@@ -292,9 +293,18 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.md,
     justifyContent: 'center',
     alignItems: 'flex-start',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   headerLogo: {
     width: 135,
     height: 32,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    elevation: 0,
+    shadowOpacity: 0,
+    backgroundColor: 'transparent',
   },
 });
