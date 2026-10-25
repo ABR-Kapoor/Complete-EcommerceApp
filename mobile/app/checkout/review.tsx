@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,7 +22,13 @@ export default function CheckoutReviewScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
   const { items: cartItems, subtotal } = useCartStore();
-  const { address, profile } = useUserStore();
+  const { address, profile, fetchAddress } = useUserStore();
+
+  useEffect(() => {
+    if (!address) {
+      fetchAddress(user?.id || 'guest');
+    }
+  }, [address, user?.id, fetchAddress]);
 
   const total = subtotal();
   const displayPhone =
@@ -48,8 +55,8 @@ export default function CheckoutReviewScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      {/* Modern Journey Stepper */}
-      <CheckoutJourneyStepper currentStep={2} />
+      {/* Modern Journey Timeline Stepper */}
+      <CheckoutJourneyStepper currentStep={2} addressDone={true} />
 
       <ScrollView
         contentContainerStyle={[
@@ -87,26 +94,31 @@ export default function CheckoutReviewScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Order Items ({cartItems.length})</Text>
 
-          {cartItems.map((item) => (
-            <View key={item.id} style={styles.itemRow}>
-              <Image
-                source={{ uri: item.products.image_url }}
-                style={styles.itemImage}
-                contentFit="cover"
-              />
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemTitle} numberOfLines={2}>
-                  {item.products.title}
-                </Text>
-                <Text style={styles.itemMeta}>
-                  Qty: {item.quantity} × ₹{item.products.price.toLocaleString()}
+          {cartItems.map((item) => {
+            const title = item.products?.title || (item as any).title || 'Product';
+            const price = Number(item.products?.price ?? (item as any).price ?? 0);
+            const imageUrl = item.products?.image_url || (item as any).image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
+            return (
+              <View key={item.id} style={styles.itemRow}>
+                <Image
+                  source={{ uri: imageUrl }}
+                  style={styles.itemImage}
+                  contentFit="cover"
+                />
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemTitle} numberOfLines={2}>
+                    {title}
+                  </Text>
+                  <Text style={styles.itemMeta}>
+                    Qty: {item.quantity} × ₹{price.toLocaleString()}
+                  </Text>
+                </View>
+                <Text style={styles.itemSubtotal}>
+                  ₹{(item.quantity * price).toLocaleString()}
                 </Text>
               </View>
-              <Text style={styles.itemSubtotal}>
-                ₹{(item.quantity * item.products.price).toLocaleString()}
-              </Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* Total Card */}

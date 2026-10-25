@@ -32,9 +32,7 @@ export default function CheckoutAddressScreen() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchAddress(user.id);
-    }
+    fetchAddress(user?.id || 'guest');
   }, [user?.id, fetchAddress]);
 
   useEffect(() => {
@@ -57,7 +55,7 @@ export default function CheckoutAddressScreen() {
   }, [address, profile, user]);
 
   const handleNext = async () => {
-    if (!user?.id) return;
+    const activeUserId = user?.id || 'guest';
     if (!street.trim() || !city.trim() || !state.trim() || !zipCode.trim() || !phone.trim()) {
       Alert.alert('Address Required', 'Please complete all address fields to proceed.');
       return;
@@ -65,7 +63,7 @@ export default function CheckoutAddressScreen() {
 
     setSaving(true);
     try {
-      await saveAddress(user.id, {
+      await saveAddress(activeUserId, {
         street: street.trim(),
         city: city.trim(),
         state: state.trim(),

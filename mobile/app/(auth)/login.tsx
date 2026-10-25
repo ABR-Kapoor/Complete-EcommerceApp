@@ -22,10 +22,12 @@ import { getClerkErrorMessage } from '../../services/clerkError';
 
 function useWarmUpBrowser() {
   useEffect(() => {
-    void WebBrowser.warmUpAsync();
-    return () => {
-      void WebBrowser.coolDownAsync();
-    };
+    if (Platform.OS !== 'web') {
+      void WebBrowser.warmUpAsync();
+      return () => {
+        void WebBrowser.coolDownAsync();
+      };
+    }
   }, []);
 }
 

@@ -15,6 +15,7 @@ import { useUser } from '@clerk/expo';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCartStore } from '../../store/cartStore';
+import { useUserStore } from '../../store/userStore';
 import CheckoutJourneyStepper from '../../components/CheckoutJourneyStepper';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
 import { CartItem } from '../../types';
@@ -25,13 +26,17 @@ function CartItemCard({ item }: { item: CartItem }) {
   const removeItem = useCartStore((s) => s.removeItem);
   const [imgError, setImgError] = useState(false);
 
+  const productTitle = item.products?.title || (item as any).title || 'Healthcare Product';
+  const productPrice = item.products?.price ?? (item as any).price ?? 0;
+  const productImage = item.products?.image_url || (item as any).image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80';
+
   const handleRemove = () => {
-    Alert.alert('Remove Item', `Remove ${item.products.title} from cart?`, [
+    Alert.alert('Remove Item', `Remove ${productTitle} from cart?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
         style: 'destructive',
-        onPress: () => user && removeItem(user.id, item.id),
+        onPress: () => removeItem(user?.id || 'guest', item.id),
       },
     ]);
   };
@@ -39,7 +44,7 @@ function CartItemCard({ item }: { item: CartItem }) {
   return (
     <View style={styles.cartItem}>
       <Image
-        source={{ uri: imgError || !item.products?.image_url ? 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80' : item.products.image_url }}
+        source={{ uri: imgError || !productImage ? 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80' : productImage }}
         style={styles.itemImage}
         contentFit="cover"
         transition={200}
@@ -47,20 +52,19 @@ function CartItemCard({ item }: { item: CartItem }) {
       />
       <View style={styles.itemDetails}>
         <Text style={styles.itemTitle} numberOfLines={2}>
-          {item.products.title}
+          {productTitle}
         </Text>
-        <Text style={styles.itemPrice}>₹{item.products.price.toLocaleString()}</Text>
+        <Text style={styles.itemPrice}>₹{productPrice.toLocaleString()}</Text>
 
         <View style={styles.itemActions}>
           <View style={styles.quantityControls}>
             <TouchableOpacity
               style={styles.qtyButton}
               onPress={() => {
-                if (!user) return;
                 if (item.quantity <= 1) {
                   handleRemove();
                 } else {
-                  updateQuantity(user.id, item.id, item.quantity - 1);
+                  updateQuantity(user?.id || 'guest', item.id, item.quantity - 1);
                 }
               }}
             >
@@ -69,7 +73,7 @@ function CartItemCard({ item }: { item: CartItem }) {
             <Text style={styles.qtyText}>{item.quantity}</Text>
             <TouchableOpacity
               style={styles.qtyButton}
-              onPress={() => user && updateQuantity(user.id, item.id, item.quantity + 1)}
+              onPress={() => updateQuantity(user?.id || 'guest', item.id, item.quantity + 1)}
             >
               <MaterialCommunityIcons name="plus" size={16} color={colors.textPrimary} />
             </TouchableOpacity>
@@ -95,20 +99,26 @@ export default function CartScreen() {
   const subtotal = useCartStore((s) => s.subtotal());
   const totalItems = useCartStore((s) => s.totalItems());
   const clearLocal = useCartStore((s) => s.clearLocal);
+  const address = useUserStore((s) => s.address);
+  const fetchAddress = useUserStore((s) => s.fetchAddress);
   const [refreshing, setRefreshing] = useState(false);
 
+  const activeUserId = user?.id || 'guest';
+  const isAddressDone = Boolean(address && address.street && address.city);
+
   useEffect(() => {
-    if (user?.id) {
-      fetchCart(user.id);
-    }
-  }, [user?.id, fetchCart]);
+    fetchCart(activeUserId);
+    fetchAddress(activeUserId);
+  }, [activeUserId, fetchCart, fetchAddress]);
 
   const onRefresh = useCallback(async () => {
-    if (!user?.id) return;
     setRefreshing(true);
-    await fetchCart(user.id);
+    await Promise.all([
+      fetchCart(activeUserId),
+      fetchAddress(activeUserId),
+    ]);
     setRefreshing(false);
-  }, [user?.id, fetchCart]);
+  }, [activeUserId, fetchCart, fetchAddress]);
 
   if (loading && items.length === 0 && !refreshing) {
     return (
@@ -148,8 +158,57 @@ export default function CartScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Modern Checkout Journey Stepper */}
-      <CheckoutJourneyStepper currentStep={1} />
+      {/* Modern Checkout Journey Timeline Stepper */}
+      <CheckoutJourneyStepper currentStep={1} addressDone={isAddressDone} />
+
+      {/* Delivery Address Status Banner */}
+      {items.length > 0 && (
+        <View style={styles.addressBanner}>
+          <View style={styles.addressBannerLeft}>
+            <View
+              style={[
+                styles.addressStatusDot,
+                isAddressDone ? styles.addressDotDone : styles.addressDotPending,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={isAddressDone ? 'check-bold' : 'map-marker-outline'}
+                size={14}
+                color={isAddressDone ? '#FFFFFF' : colors.primary}
+              />
+            </View>
+            <View style={styles.addressBannerTexts}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={styles.addressBannerTitle}>
+                  {isAddressDone ? 'Delivery Address Confirmed' : 'Add Delivery Address'}
+                </Text>
+                {isAddressDone && (
+                  <View style={styles.verifiedTag}>
+                    <Text style={styles.verifiedTagText}>✓ Ready</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.addressBannerSubtext} numberOfLines={1}>
+                {isAddressDone
+                  ? `${address?.street}, ${address?.city} - ${address?.zip_code}`
+                  : 'Enter delivery location to proceed to checkout'}
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.addressBannerAction}
+            onPress={() => router.push('/checkout/address')}
+            activeOpacity={0.8}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.addressBannerActionText}>
+              {isAddressDone ? 'Change' : 'Add'}
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={16} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Cart Subheader */}
       {items.length > 0 && (
@@ -157,7 +216,7 @@ export default function CartScreen() {
           <Text style={styles.cartSubheaderTitle}>
             Your Cart <Text style={{ color: colors.textSecondary, fontFamily: fonts.body }}>({totalItems} items)</Text>
           </Text>
-          <TouchableOpacity onPress={() => user && clearLocal()}>
+          <TouchableOpacity onPress={() => clearLocal()}>
             <Text style={styles.clearCartText}>Clear Cart</Text>
           </TouchableOpacity>
         </View>
@@ -211,7 +270,7 @@ export default function CartScreen() {
             onPress={() => router.push('/checkout/address')}
             activeOpacity={0.88}
           >
-            <Text style={styles.checkoutText}>Proceed to Checkout</Text>
+            <Text style={styles.checkoutText}>Proceed to Checkout • ₹{subtotal.toLocaleString()}</Text>
           </TouchableOpacity>
 
           {/* Razorpay Trust Badge */}
@@ -297,11 +356,75 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodySemiBold,
     color: colors.primary,
   },
-  stepLine: {
+  addressBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  addressBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-    marginHorizontal: 4,
+    gap: spacing.sm,
+  },
+  addressStatusDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addressDotDone: {
+    backgroundColor: '#059669',
+  },
+  addressDotPending: {
+    backgroundColor: colors.primarySoft,
+  },
+  addressBannerTexts: {
+    flex: 1,
+  },
+  addressBannerTitle: {
+    fontFamily: fonts.bodyBold,
+    fontSize: fontSize.sm,
+    color: colors.textPrimary,
+  },
+  addressBannerSubtext: {
+    fontFamily: fonts.body,
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  verifiedTag: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  verifiedTagText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 9.5,
+    color: '#059669',
+  },
+  addressBannerAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: spacing.sm,
+  },
+  addressBannerActionText: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.xs,
+    color: colors.primary,
   },
   cartSubheader: {
     flexDirection: 'row',

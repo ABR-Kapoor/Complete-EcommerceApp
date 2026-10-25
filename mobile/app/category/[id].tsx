@@ -45,13 +45,9 @@ function CategoryProductCard({ product }: { product: Product }) {
   const [imgError, setImgError] = useState(false);
 
   const handleQuickAdd = async () => {
-    if (!user?.id) {
-      router.push(`/product/${product.id}`);
-      return;
-    }
     setAdding(true);
     try {
-      await addToCart(user.id, product.id, 1);
+      await addToCart(user?.id || 'guest', product.id, 1, product);
       showToast('Added to Cart', `${product.title} has been added to your cart.`);
     } catch {
       // Handled in store

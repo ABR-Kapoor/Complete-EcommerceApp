@@ -66,14 +66,10 @@ function ProductCard({ product }: { product: Product }) {
   const [imgError, setImgError] = useState(false);
 
   const handleQuickAdd = async () => {
-    if (!user?.id) {
-      router.push((`/product/${product.id}`) as any);
-      return;
-    }
     if (adding) return;
     setAdding(true);
     try {
-      await addToCart(user.id, product.id, 1);
+      await addToCart(user?.id || 'guest', product.id, 1, product);
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
     } catch {
