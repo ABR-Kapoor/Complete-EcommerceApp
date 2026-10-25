@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AuraMart",
+    "name": " ",
     "slug": "auramart",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,7 @@
     "scheme": "auramart",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/AuraMart-transparent-Logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -19,8 +19,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/app-icon.png",
-        "backgroundColor": "#F9FDFE"
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.aurasutra.auramart",
       "permissions": [
@@ -35,6 +35,7 @@
       "output": "single",
       "favicon": "./assets/app-icon.png"
     },
+
     "plugins": [
       "expo-router",
       "expo-secure-store",
@@ -43,11 +44,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/AuraMart-transparent-Logo.png",
+          "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
       ],
+
       [
         "expo-audio",
         {
