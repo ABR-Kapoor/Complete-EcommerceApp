@@ -20,7 +20,9 @@ import { reviewsService } from '../../services/reviews.service';
 import { useCartStore } from '../../store/cartStore';
 import { useWishlistStore } from '../../store/wishlistStore';
 import { colors, fonts, fontSize, spacing, radius, shadows } from '../../theme';
+import { useNotification } from '../../context/NotificationContext';
 import { Product, Review } from '../../types';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -44,6 +46,7 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useUser();
+  const { showToast } = useNotification();
 
   const addToCart = useCartStore((s) => s.addToCart);
   const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
@@ -58,50 +61,86 @@ export default function ProductDetailScreen() {
   const [descExpanded, setDescExpanded] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
     const pid = Number(id);
-    Promise.all([
-      productsService.getById(pid),
-      reviewsService.getProductReviews(pid),
-    ])
-      .then(([prod, revs]) => {
-        setProduct(prod);
-        setReviews(revs);
-        // Load related products from same category
-        if (prod?.category) {
-          productsService
-            .getAll({ category: prod.category })
-            .then((all) => setRelatedProducts(all.filter((p) => p.id !== pid).slice(0, 6)));
+    let isMounted = true;
+
+    setLoading(true);
+
+    const loadData = async () => {
+      try {
+        const prod = await productsService.getById(pid);
+        if (isMounted && prod && prod.id) {
+          setProduct(prod);
+
+          if (prod.category) {
+            productsService
+              .getAll({ category: prod.category })
+              .then((all) => {
+                if (isMounted) {
+                  setRelatedProducts(all.filter((p) => p.id !== pid).slice(0, 6));
+                }
+              })
+              .catch(() => {});
+          }
         }
-      })
-      .finally(() => setLoading(false));
+      } catch (e) {
+        console.log('Error fetching product:', e);
+      }
+
+      try {
+        const revs = await reviewsService.getProductReviews(pid);
+        if (isMounted && Array.isArray(revs)) {
+          setReviews(revs);
+        }
+      } catch {
+        if (isMounted) setReviews([]);
+      }
+
+      if (isMounted) setLoading(false);
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   const handleAddToCart = useCallback(async () => {
-    if (!user?.id || !product) return;
+    if (!user?.id || !product) {
+      showToast('Login Required', 'Please sign in to add products to your cart.');
+      return;
+    }
     setAdding(true);
     try {
       await addToCart(user.id, product.id, quantity);
-      Alert.alert('Added to Cart', `${product.title} (x${quantity}) added to your cart.`);
+      showToast('Added to Cart', `${product.title} (x${quantity}) added to your cart.`);
     } catch {
-      Alert.alert('Error', 'Could not add to cart. Please try again.');
+      showToast('Error', 'Could not add to cart. Please try again.');
     } finally {
       setAdding(false);
     }
-  }, [user, product, quantity]);
+  }, [user, product, quantity, showToast, addToCart]);
 
   const handleBuyNow = useCallback(async () => {
-    if (!user?.id || !product) return;
+    if (!user?.id || !product) {
+      showToast('Login Required', 'Please sign in to proceed to checkout.');
+      return;
+    }
     setAdding(true);
     try {
       await addToCart(user.id, product.id, quantity);
       router.push('/cart');
     } catch {
-      Alert.alert('Error', 'Could not proceed. Please try again.');
+      showToast('Error', 'Could not proceed to cart. Please try again.');
     } finally {
       setAdding(false);
     }
-  }, [user, product, quantity]);
+  }, [user, product, quantity, showToast, addToCart, router]);
 
   const avgRating =
     reviews.length > 0
@@ -119,13 +158,27 @@ export default function ProductDetailScreen() {
 
   if (!product) {
     return (
-      <View style={styles.centered}>
-        <Stack.Screen options={{ title: 'Not Found' }} />
-        <MaterialCommunityIcons name="alert-circle-outline" size={48} color={colors.textTertiary} />
-        <Text style={styles.emptyText}>Product not found</Text>
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.emptyIconCircle}>
+          <MaterialCommunityIcons name="pill-off" size={48} color={colors.primary} />
+        </View>
+        <Text style={styles.emptyTitle}>Product Not Found</Text>
+        <Text style={styles.emptyText}>
+          The requested medicine or healthcare item could not be loaded.
+        </Text>
+        <TouchableOpacity
+          style={styles.backHomeBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={18} color="#FFFFFF" />
+          <Text style={styles.backHomeBtnText}>Go Back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
+
 
   const handleShare = async () => {
     if (!product) return;
@@ -669,4 +722,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.sm,
   },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyTitle: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  backHomeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+  },
+  backHomeBtnText: {
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.sm,
+    color: colors.surface,
+  },
 });
+

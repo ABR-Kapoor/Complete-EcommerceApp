@@ -3,9 +3,14 @@ import { Review } from '../types';
 
 export const reviewsService = {
   async getProductReviews(productId: number): Promise<Review[]> {
-    const { data } = await api.get(`/api/reviews/product/${productId}`);
-    return data;
+    try {
+      const { data } = await api.get(`/api/reviews/product/${productId}`);
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
   },
+
 
   async getUserReviews(userId: string): Promise<Review[]> {
     try {

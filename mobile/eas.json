@@ -1,0 +1,35 @@
+{
+  "cli": {
+    "version": ">= 14.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_c3dlZXQtbWlubm93LTY4MTkuY2xlcmsuYWNjb3VudHMuZGV2JA",
+        "EXPO_PUBLIC_API_URL": "https://abrecom-backend.vercel.app",
+        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_test_T1oxnYBnlYBotP"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_c3dlZXQtbWlubm93LTY4MTkuY2xlcmsuYWNjb3VudHMuZGV2JA",
+        "EXPO_PUBLIC_API_URL": "https://abrecom-backend.vercel.app",
+        "EXPO_PUBLIC_RAZORPAY_KEY_ID": "rzp_test_T1oxnYBnlYBotP"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

@@ -124,10 +124,10 @@ export default function RootLayout() {
   });
 
   const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded) {
+    try {
       await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -137,29 +137,37 @@ export default function RootLayout() {
     }
   }, []);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  useEffect(() => {
+    // Safety fallback: ensure splash screen hides even if Clerk or fonts take time
+    const timer = setTimeout(() => {
+      SplashScreen.hideAsync().catch(() => {});
+    }, 800);
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+    return () => clearTimeout(timer);
+  }, [fontsLoaded]);
 
   return (
     <SafeAreaProvider>
-      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <ClerkLoaded>
-          <QueryClientProvider client={queryClient}>
-            <NotificationProvider>
-              <View style={styles.container} onLayout={onLayoutRootView}>
+      <View style={styles.container} onLayout={onLayoutRootView}>
+        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <ClerkLoaded>
+            <QueryClientProvider client={queryClient}>
+              <NotificationProvider>
                 <RNStatusBar backgroundColor={colors.surface} barStyle="dark-content" translucent={true} />
                 <StatusBar style="dark" />
                 <AuthGate />
                 <VoiceSearchDialog />
-              </View>
-            </NotificationProvider>
-          </QueryClientProvider>
-        </ClerkLoaded>
-      </ClerkProvider>
+              </NotificationProvider>
+            </QueryClientProvider>
+          </ClerkLoaded>
+        </ClerkProvider>
+      </View>
     </SafeAreaProvider>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

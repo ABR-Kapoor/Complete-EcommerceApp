@@ -130,30 +130,32 @@ function ProductRow({
 function statusTitle(phase: Phase): string {
   switch (phase) {
     case 'requesting':
-      return 'Waking up mic…';
+      return 'Starting microphone…';
     case 'listening':
-      return 'Listening to your symptoms…';
+      return 'Listening… Speak Now';
     case 'processing':
       return 'Compiling & Processing…';
     case 'results':
       return 'Aura AI Clinical Summary';
     case 'error':
-      return 'Something went wrong';
+      return 'Microphone Inactive';
     default:
       return 'Voice Search';
   }
 }
 
 function statusSubtitle(phase: Phase, durationMillis: number, error: string): string {
-  if (phase === 'error') return error || 'Please try again.';
+  if (phase === 'error') return error || 'Tap to speak again or tap a symptom below.';
   if (phase === 'listening') {
-    return `Describe your symptoms or medicines in any language · ${Math.round((durationMillis || 0) / 1000)}s`;
+    const secs = Math.round((durationMillis || 0) / 1000);
+    return `Say your symptoms or medicine names (${secs}s) · Tap Stop when done`;
   }
-  if (phase === 'requesting') return 'Grant microphone access to search by voice.';
+  if (phase === 'requesting') return 'Granting microphone access…';
   if (phase === 'processing') return 'Compiling your sentence into 3 to 4 specific search issues…';
   if (phase === 'results') return 'Tap any issue below to view targeted remedies.';
   return 'Tap the mic and describe what you need.';
 }
+
 
 export default function VoiceSearchDialog() {
   const visible = useVoiceSearchStore((s) => s.visible);
@@ -297,6 +299,35 @@ export default function VoiceSearchDialog() {
     },
     [user, addToCart]
   );
+
+  const handleQuickSymptom = useCallback(async (symptom: string) => {
+    if (autoStopRef.current) {
+      clearTimeout(autoStopRef.current);
+      autoStopRef.current = null;
+    }
+    try {
+      if (recorder.isRecording) await recorder.stop();
+    } catch {}
+
+    setPhase('processing');
+    setCompileStep(0);
+    clearCompileInterval();
+    compileIntervalRef.current = setInterval(() => {
+      setCompileStep((prev) => (prev < 3 ? prev + 1 : prev));
+    }, 500);
+
+    try {
+      const data = await voiceService.searchText(symptom);
+      clearCompileInterval();
+      setResult(data);
+      setSelectedIssueId('all');
+      setPhase('results');
+    } catch {
+      clearCompileInterval();
+      setErrorMsg('Could not fetch remedies. Please try again.');
+      setPhase('error');
+    }
+  }, [recorder, clearCompileInterval]);
 
   const isListening = phase === 'listening';
   const isBusy = phase === 'requesting' || phase === 'processing';
@@ -626,31 +657,68 @@ export default function VoiceSearchDialog() {
           {/* Action Controls */}
           <View style={styles.controls}>
             {isListening ? (
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => void stopAndSearch()}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="check-circle-outline" size={20} color="#FFFFFF" />
-                <Text style={styles.primaryButtonText}>Done (Compile Issues)</Text>
-              </TouchableOpacity>
+              <View style={styles.listeningControlsCol}>
+                <TouchableOpacity
+                  style={[styles.primaryButton, styles.stopSearchButton]}
+                  onPress={() => void stopAndSearch()}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons name="stop-circle" size={22} color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>Stop & Search Remedies</Text>
+                </TouchableOpacity>
+
+                <View style={styles.quickSymptomSection}>
+                  <Text style={styles.quickSymptomHeader}>Or tap common issue:</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPillsRow}>
+                    {['Fever & Headache', 'Cold & Cough', 'Acidity & Gas', 'Joint & Muscle Pain', 'First Aid'].map((sym) => (
+                      <TouchableOpacity
+                        key={sym}
+                        style={styles.quickPill}
+                        onPress={() => handleQuickSymptom(sym)}
+                      >
+                        <Text style={styles.quickPillText}>{sym}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </View>
             ) : isBusy ? null : (
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => void startListening()}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="microphone" size={20} color="#FFFFFF" />
-                <Text style={styles.primaryButtonText}>
-                  {isResults ? 'Ask again' : 'Try again'}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.listeningControlsCol}>
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={() => void startListening()}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons name="microphone" size={20} color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>
+                    {isResults ? 'Ask another query' : 'Tap to Speak'}
+                  </Text>
+                </TouchableOpacity>
+
+                {!isResults && (
+                  <View style={styles.quickSymptomSection}>
+                    <Text style={styles.quickSymptomHeader}>Or tap common issue:</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickPillsRow}>
+                      {['Fever & Headache', 'Cold & Cough', 'Acidity & Gas', 'Joint & Muscle Pain', 'First Aid'].map((sym) => (
+                        <TouchableOpacity
+                          key={sym}
+                          style={styles.quickPill}
+                          onPress={() => handleQuickSymptom(sym)}
+                        >
+                          <Text style={styles.quickPillText}>{sym}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
             )}
           </View>
         </View>
       </View>
     </Modal>
   );
+
 }
 
 const styles = StyleSheet.create({
@@ -1115,6 +1183,42 @@ const styles = StyleSheet.create({
   controls: {
     marginTop: spacing.sm,
   },
+  listeningControlsCol: {
+    gap: spacing.xs + 2,
+    width: '100%',
+  },
+  stopSearchButton: {
+    backgroundColor: '#DC2626',
+  },
+  quickSymptomSection: {
+    marginTop: 2,
+    alignItems: 'center',
+  },
+  quickSymptomHeader: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  quickPillsRow: {
+    gap: 6,
+    paddingHorizontal: 4,
+  },
+  quickPill: {
+    backgroundColor: colors.surfaceAlt,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  quickPillText: {
+    fontFamily: fonts.bodySemiBold,
+    fontSize: 11,
+    color: colors.primary,
+  },
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1130,3 +1234,4 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 });
+

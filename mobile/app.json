@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AuraMart",
+    "name": " ",
     "slug": "auramart",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,7 @@
     "scheme": "auramart",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/AuraMart-transparent-Logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#FFFFFF"
     },
@@ -19,16 +19,23 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/app-icon.png",
-        "backgroundColor": "#F9FDFE"
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#FFFFFF"
       },
-      "package": "com.aurasutra.auramart"
+      "package": "com.aurasutra.auramart",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/app-icon.png"
     },
+
     "plugins": [
       "expo-router",
       "expo-secure-store",
@@ -37,11 +44,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/AuraMart-transparent-Logo.png",
+          "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
       ],
+
       [
         "expo-audio",
         {
@@ -53,6 +61,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7df4d1ef-f42a-428a-a316-bfe35d4f3fe8"
+      }
+    },
+    "owner": "biryanidev"
   }
 }
