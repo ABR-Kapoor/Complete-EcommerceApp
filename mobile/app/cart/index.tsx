@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, Stack } from 'expo-router';
@@ -87,11 +89,26 @@ export default function CartScreen() {
   const bottomInset = Math.max(insets.bottom, 12);
   const items = useCartStore((s) => s.items);
   const loading = useCartStore((s) => s.loading);
+  const fetchCart = useCartStore((s) => s.fetchCart);
   const subtotal = useCartStore((s) => s.subtotal());
   const totalItems = useCartStore((s) => s.totalItems());
   const clearLocal = useCartStore((s) => s.clearLocal);
+  const [refreshing, setRefreshing] = useState(false);
 
-  if (loading) {
+  useEffect(() => {
+    if (user?.id) {
+      fetchCart(user.id);
+    }
+  }, [user?.id, fetchCart]);
+
+  const onRefresh = useCallback(async () => {
+    if (!user?.id) return;
+    setRefreshing(true);
+    await fetchCart(user.id);
+    setRefreshing(false);
+  }, [user?.id, fetchCart]);
+
+  if (loading && items.length === 0 && !refreshing) {
     return (
       <View style={styles.centered}>
         <Stack.Screen options={{ title: 'Cart' }} />
@@ -153,6 +170,14 @@ export default function CartScreen() {
           { paddingBottom: items.length > 0 ? 110 + bottomInset : spacing.md },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
+          />
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <MaterialCommunityIcons name="cart-outline" size={56} color={colors.textTertiary} />

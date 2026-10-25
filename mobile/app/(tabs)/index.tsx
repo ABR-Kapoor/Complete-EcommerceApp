@@ -59,16 +59,24 @@ function ProductCard({ product }: { product: Product }) {
   const toggleWishlist = useWishlistStore((s) => s.toggleWishlist);
   const addToCart = useCartStore((s) => s.addToCart);
   const isInWishlist = useWishlistStore((s) => s.productIds.includes(product.id));
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
 
   const handleQuickAdd = async () => {
     if (!user?.id) {
       router.push((`/product/${product.id}`) as any);
       return;
     }
+    if (adding) return;
+    setAdding(true);
     try {
       await addToCart(user.id, product.id, 1);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
     } catch {
       // Handled in store
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -125,11 +133,16 @@ function ProductCard({ product }: { product: Product }) {
         </View>
 
         <TouchableOpacity
-          style={styles.cardAddToCartBtn}
+          style={[styles.cardAddToCartBtn, added && { backgroundColor: '#059669' }]}
           onPress={handleQuickAdd}
           activeOpacity={0.85}
+          disabled={adding}
         >
-          <Text style={styles.cardAddToCartText}>Add to Cart</Text>
+          {adding ? (
+            <ActivityIndicator size="small" color={colors.surface} />
+          ) : (
+            <Text style={styles.cardAddToCartText}>{added ? 'Added ✓' : 'Add to Cart'}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </TouchableOpacity>

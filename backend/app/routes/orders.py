@@ -106,10 +106,12 @@ def create_order(data: dict = Body(...)):
                     "razorpay_id": data.get("razorpay_payment_id", "N/A")
                 }
                 client.table("payments").insert(payment_payload).execute()
+            except Exception as pe:
+                print(f"Payment record warning: {pe}")
         # 6. Automatically clear user cart items in DB
         try:
             cart_res = client.table("carts").select("id").eq("user_id", uid).maybe_single().execute()
-            if cart_res and cart_res.data:
+            if cart_res and hasattr(cart_res, "data") and cart_res.data:
                 client.table("cart_items").delete().eq("cart_id", cart_res.data["id"]).execute()
         except Exception as ce:
             print(f"Cart cleanup notice: {ce}")
